@@ -73,9 +73,22 @@ jobs:
         cp /mingw64/bin/SDL2_ttf.dll dist/
         cp /mingw64/bin/SDL2_image.dll dist/
         cp /mingw64/bin/SDL2_mixer.dll dist/
+        # SDL2_image dependencies
+        cp /mingw64/bin/libavif-16.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libjpeg-8.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libtiff-6.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libwebp-7.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libpng16-16.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libtiffxx-6.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libdeflate.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libjxl.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libaom.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libdav1d-7.dll dist/ 2>/dev/null || true
+        # Audio
         cp /mingw64/bin/libvorbis-0.dll dist/ 2>/dev/null || true
         cp /mingw64/bin/libvorbisfile-3.dll dist/ 2>/dev/null || true
         cp /mingw64/bin/libogg-0.dll dist/ 2>/dev/null || true
+        # Other
         cp /mingw64/bin/libzip.dll dist/ 2>/dev/null || true
         cp /mingw64/bin/zlib1.dll dist/ 2>/dev/null || true
         cp /mingw64/bin/libgcc_s_seh-1.dll dist/ 2>/dev/null || true
