@@ -49,7 +49,7 @@ jobs:
         tar xzf libmpeg2-master.tgz
         cd libmpeg2-master
         autoreconf -f -i
-        ./configure --prefix=/mingw64 --disable-shared --enable-static --disable-sdl --quiet
+        ./configure --prefix=/mingw64 --disable-shared --enable-static --disable-sdl --disable-mpeg2dec --quiet
         make V=0
         make install
 
