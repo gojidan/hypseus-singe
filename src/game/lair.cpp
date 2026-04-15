@@ -838,7 +838,7 @@ bool lair::init()
 
     // Open ROM logger — captures real laserdisc frame data during gameplay
     if (bResult) {
-        rom_logger::open(m_shortgamename.c_str(), m_switchA, m_switchB);
+        rom_logger::open(m_shortgamename, m_switchA, m_switchB);
     }
 
     return bResult;
