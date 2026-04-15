@@ -11,9 +11,8 @@ if( WIN32 OR MINGW )
     find_path( MPEG2_INC NAMES mpeg2.h PATH_SUFFIXES mpeg2dec REQUIRED
         HINTS /mingw64/include $ENV{MINGW_PREFIX}/include )
 
-    # include_directories() needs the directory containing mpeg2.h directly
-    # (vldp_internal.cpp does #include <mpeg2.h>, not <mpeg2dec/mpeg2.h>)
-    set( MPEG2_INCLUDE_DIRS "${MPEG2_INC}/mpeg2dec" )
+    # find_path already points to the dir containing mpeg2.h directly
+    set( MPEG2_INCLUDE_DIRS "${MPEG2_INC}" )
     set( MPEG2_LIBRARIES    "${MPEG2_LIB}" )
     set( MPEG2_FOUND ON )
 
