@@ -1,4 +1,5 @@
 set( LIB_SOURCES
+    rom_logger.cpp
     astron.cpp
     badlands.cpp
     bega.cpp
@@ -30,6 +31,7 @@ set( LIB_SOURCES
 )
 
 set( LIB_HEADERS
+    rom_logger.h
     astron.h
     badlands.h
     bega.h

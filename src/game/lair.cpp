@@ -49,6 +49,7 @@
 #include "../sound/sound.h"
 #include "../cpu/cpu.h"
 #include "../cpu/generic_z80.h"
+#include "rom_logger.h"
 
 bool g_bUsbAnnunciator = false;
 bool g_bBootLog = true;
@@ -668,6 +669,7 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
             case 0xE03E:
                 if ((Value != 0xCC) || (m_bUseAnnunciator)) {
                     m_pScoreboard->update_player_lives(Value & 0x0F, 0);
+                    rom_logger::log_lives(Value & 0x0F, g_ldp->get_current_frame());
                 } else {
                     // show cadet skill LED
                     g_skill = 0x3;
@@ -832,6 +834,11 @@ bool lair::init()
         m_pScoreboard = pScoreboard;
     } else {
         bResult = false;
+    }
+
+    // Open ROM logger — captures real laserdisc frame data during gameplay
+    if (bResult) {
+        rom_logger::open(m_shortgamename.c_str(), m_switchA, m_switchB);
     }
 
     return bResult;
@@ -1110,6 +1117,9 @@ void lair::input_enable(Uint8 move, Sint8 mouseID)
         LOGD << "Error, bug in Dragon's Lair's input enable";
         break;
     }
+
+    // Log the opening of this input window (frame when ROM starts accepting this move)
+    rom_logger::log_input_enable(move, g_ldp->get_current_frame());
 }
 
 void lair::input_disable(Uint8 move, Sint8 mouseID)
@@ -1163,6 +1173,9 @@ void lair::input_disable(Uint8 move, Sint8 mouseID)
         LOGD << "Error, bug in Dragon's Lair's move disable";
         break;
     }
+
+    // Log the closing of this input window (frame when ROM stops accepting this move)
+    rom_logger::log_input_disable(move, g_ldp->get_current_frame());
 }
 
 void lair::OnVblank()

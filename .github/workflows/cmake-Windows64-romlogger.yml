@@ -1,0 +1,75 @@
+name: Windows64-RomLogger
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Windows 64bit Build with ROM Logger'
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
+          mingw-w64-x86_64-SDL2
+          mingw-w64-x86_64-SDL2_ttf
+          mingw-w64-x86_64-SDL2_image
+          mingw-w64-x86_64-SDL2_mixer
+          mingw-w64-x86_64-libogg
+          mingw-w64-x86_64-libvorbis
+          mingw-w64-x86_64-libzip
+          mingw-w64-x86_64-zlib
+
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake ../src -G Ninja -DCMAKE_BUILD_TYPE=Release
+        ninja
+
+    - name: Package
+      run: |
+        mkdir dist
+        cp build/hypseus.exe dist/
+        # Copy SDL2 DLLs needed to run on Windows without MSYS2
+        cp /mingw64/bin/SDL2.dll dist/
+        cp /mingw64/bin/SDL2_ttf.dll dist/
+        cp /mingw64/bin/SDL2_image.dll dist/
+        cp /mingw64/bin/SDL2_mixer.dll dist/
+        cp /mingw64/bin/libvorbis-0.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libvorbisfile-3.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libogg-0.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libzip.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/zlib1.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libgcc_s_seh-1.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libstdc++-6.dll dist/ 2>/dev/null || true
+        cp /mingw64/bin/libwinpthread-1.dll dist/ 2>/dev/null || true
+
+    - name: Create Distribution
+      id: vars
+      run: |
+        ShortSHA=$(git rev-parse --short ${{ github.sha }})
+        echo "COMMIT_SHORT_SHA=$ShortSHA" >> $GITHUB_ENV
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: hypseus-singe-windows64-romlogger-${{ env.COMMIT_SHORT_SHA }}
+        path: dist/

@@ -43,6 +43,7 @@
 #include "../timer/timer.h"
 #include "framemod.h"
 #include "ldp.h"
+#include "../game/rom_logger.h"
 #include <plog/Log.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,6 +127,8 @@ void ldp::pre_shutdown()
         player_initialized = false;
     }
     // else we were never initialized
+
+    rom_logger::close();
 }
 
 // does any player specific stuff
@@ -193,6 +196,9 @@ bool ldp::pre_search(const char *pszFrame, bool block_until_search_finishes)
     } else {
         s1 = "Search to " + numstr::ToStr(frame_number) + " received";
     }
+
+    // Log scene jump: from where we were → where we're going
+    rom_logger::log_search(m_last_seeked_frame, frame_number);
 
     // notify us if we're still using outdated blocking searching
     if (block_until_search_finishes && m_bVerbose) s1 += " [blocking] ";
@@ -522,6 +528,8 @@ void ldp::pre_play()
         LOGD << "Play"; // moved to the end of the function so as to not
                         // cause lag before play command could be issued
     }
+
+    rom_logger::log_play(m_uCurrentFrame);
 }
 
 // starts playing the laserdisc
@@ -546,6 +554,7 @@ void ldp::pre_pause()
         pause();
         m_status = LDP_PAUSED;
         if (m_bVerbose) { LOGD << "Pause"; }
+        rom_logger::log_pause(m_uCurrentFrame);
     } else {
         if (m_bVerbose) {
             LOGD << "Received pause while disc was not playing, ignoring";
