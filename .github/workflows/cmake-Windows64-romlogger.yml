@@ -37,21 +37,34 @@ jobs:
           mingw-w64-x86_64-libvorbis
           mingw-w64-x86_64-libzip
           mingw-w64-x86_64-zlib
-          mingw-w64-x86_64-libmpeg2
+          autoconf
+          automake
+          libtool
+          make
+          perl
+
+    - name: Build libmpeg2 from bundled source
+      run: |
+        cd src/3rdparty/libmpeg2
+        tar xzf libmpeg2-master.tgz
+        cd libmpeg2-master
+        autoreconf -f -i
+        ./configure --prefix=/mingw64 --disable-shared --enable-static --disable-sdl --quiet
+        make V=0
+        make install
 
     - name: Build
       run: |
         mkdir build
         cd build
         cmake ../src -G Ninja -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_CXX_STANDARD_LIBRARIES="-lSDL2_mixer -lSDL2_image -lSDL2_ttf -lmpeg2 -lmingw32 -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32"
+          -DCMAKE_CXX_STANDARD_LIBRARIES="-lSDL2_mixer -lSDL2_image -lSDL2_ttf -lmingw32 -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32"
         ninja
 
     - name: Package
       run: |
         mkdir dist
         cp build/hypseus.exe dist/
-        # Copy SDL2 DLLs needed to run on Windows without MSYS2
         cp /mingw64/bin/SDL2.dll dist/
         cp /mingw64/bin/SDL2_ttf.dll dist/
         cp /mingw64/bin/SDL2_image.dll dist/

@@ -2,21 +2,26 @@ macro( build_libmpeg2 )
 
 if( WIN32 OR MINGW )
 
-    # On Windows/MinGW use the system package instead of building from source
-    # with autotools (which is unreliable on Windows).
-    # Install with: pacman -S mingw-w64-x86_64-libmpeg2
-    find_library( MPEG2_LIB NAMES mpeg2 libmpeg2 REQUIRED )
-    find_path( MPEG2_INC NAMES mpeg2.h PATH_SUFFIXES mpeg2dec REQUIRED )
+    # On Windows/MinGW, libmpeg2 is pre-built from bundled source by the
+    # CI workflow (see cmake-Windows64-romlogger.yml) and installed to /mingw64.
+    # We look for the static library (.a) because the MSYS2 DLL import
+    # library does not export symbols in a compatible way.
+    find_library( MPEG2_LIB NAMES libmpeg2.a mpeg2 REQUIRED
+        HINTS /mingw64/lib $ENV{MINGW_PREFIX}/lib )
+    find_path( MPEG2_INC NAMES mpeg2.h PATH_SUFFIXES mpeg2dec REQUIRED
+        HINTS /mingw64/include $ENV{MINGW_PREFIX}/include )
 
-    set( MPEG2_INCLUDE_DIRS "${MPEG2_INC}" )
+    # include_directories() needs the directory containing mpeg2.h directly
+    # (vldp_internal.cpp does #include <mpeg2.h>, not <mpeg2dec/mpeg2.h>)
+    set( MPEG2_INCLUDE_DIRS "${MPEG2_INC}/mpeg2dec" )
     set( MPEG2_LIBRARIES    "${MPEG2_LIB}" )
     set( MPEG2_FOUND ON )
 
     # Dummy target so add_dependencies(vldp libmpeg2) does not fail
     add_custom_target( libmpeg2 )
 
-    message( STATUS "Using system libmpeg2: ${MPEG2_LIB}" )
-    message( STATUS "libmpeg2 include: ${MPEG2_INC}" )
+    message( STATUS "Using pre-built libmpeg2: ${MPEG2_LIB}" )
+    message( STATUS "libmpeg2 include dir: ${MPEG2_INCLUDE_DIRS}" )
 
 else()
 
