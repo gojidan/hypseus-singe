@@ -625,11 +625,13 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
             case 0xE034:
             case 0xE035:
                 m_pScoreboard->update_player_score(Addr & 7, Value & 0x0F, 1);
+                rom_logger::log_score(1, Addr & 7, Value & 0x0F, g_ldp->get_current_frame());
                 break;
 
             case 0xE036: // 10's position of how many credits are deposited
             case 0xE037: // 1's position of how many credits are deposited
                 m_pScoreboard->update_credits(Addr & 1, Value & 0x0F);
+                rom_logger::log_score(0, Addr & 1, Value & 0x0F, g_ldp->get_current_frame());
                 break;
 
             case 0xE038:
@@ -642,15 +644,18 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
                 // annunciator
                 if ((Value != 0xCC) || (m_bUseAnnunciator)) {
                     m_pScoreboard->update_player_score(Addr & 7, (Value & 0x0F), 0);
+                    rom_logger::log_score(2, Addr & 7, Value & 0x0F, g_ldp->get_current_frame());
                 }
                 // else do something with the LED's
                 else {
                     if (Addr == 0xE03B) {
                         g_skill = 0x1;
                         change_led(false, false, true); // ACE SKILL
+                        rom_logger::log_skill("ace", g_ldp->get_current_frame());
 		    } else if (Addr == 0xE03D) {
                         g_skill = 0x2;
                         change_led(false, true, false); // CAPTAIN SKILL
+                        rom_logger::log_skill("captain", g_ldp->get_current_frame());
 		    }
                 }
                 if (g_bUsbAnnunciator) {
@@ -677,6 +682,7 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
                     // show cadet skill LED
                     g_skill = 0x3;
                     change_led(true, false, false);
+                    rom_logger::log_skill("cadet", g_ldp->get_current_frame());
                 }
                 break;
             // lives of player 2

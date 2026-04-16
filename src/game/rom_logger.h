@@ -51,4 +51,13 @@ void log_lives(uint8_t lives, uint32_t frame); // lives register updated
 // "buzz"   means the ROM has rejected the move (wrong input or wrong timing).
 void log_sound(const char* name, uint32_t frame);
 
+// Scoreboard digit update — emitted whenever the ROM writes a score/credits digit.
+// player = 1 or 2, pos = digit position 0 (most significant) to 5 (least significant).
+// credits_pos = 0 (tens) or 1 (units) when player == 0.
+void log_score(uint8_t player, uint8_t pos, uint8_t digit, uint32_t frame);
+
+// Space Ace skill level selected by the player (Ace/Captain/Cadet).
+// Emitted when the ROM writes 0xCC to the annunciator LED addresses.
+void log_skill(const char* skill, uint32_t frame);
+
 } // namespace rom_logger

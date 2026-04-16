@@ -160,4 +160,22 @@ void log_sound(const char* name, uint32_t frame)
     fflush(s_file);
 }
 
+void log_score(uint8_t player, uint8_t pos, uint8_t digit, uint32_t frame)
+{
+    if (!s_file) return;
+    fprintf(s_file,
+            "{\"e\":\"score\",\"p\":%u,\"pos\":%u,\"d\":%u,\"f\":%u,\"ms\":%u}\n",
+            (unsigned)player, (unsigned)pos, (unsigned)digit, frame, elapsed_ms());
+    fflush(s_file);
+}
+
+void log_skill(const char* skill, uint32_t frame)
+{
+    if (!s_file) return;
+    fprintf(s_file,
+            "{\"e\":\"skill\",\"level\":\"%s\",\"f\":%u,\"ms\":%u}\n",
+            skill, frame, elapsed_ms());
+    fflush(s_file);
+}
+
 } // namespace rom_logger
