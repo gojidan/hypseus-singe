@@ -544,28 +544,26 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
                 if (Value & 1) {
                     int index = m_cpumem[0xA01D] | (m_cpumem[0xA01E] << 8); // pointer to audio data
 
+                    // Identify sound type from ROM data regardless of audio mode.
+                    // This detection is always valid and used for logging.
+                    const char* sound_name = nullptr;
+                    if (m_cpumem[index + 1] == 0xD5)      sound_name = "accept";
+                    else if (m_cpumem[index + 1] == 0x66)  sound_name = "credit";
+                    else if (m_cpumem[index + 1] == 0x99)  sound_name = "buzz";
+
+                    if (sound_name) {
+                        rom_logger::log_sound(sound_name, g_ldp->get_current_frame());
+                    }
+
                     if (m_prefer_samples) {
-                        // only the 'accept' sound data has a D5 as the second
-                        // byte
-                        if (m_cpumem[index + 1] == 0xD5) {
-                            sound::play(S_DL_ACCEPT);
-                            rom_logger::log_sound("accept", g_ldp->get_current_frame());
-                        }
-                        // only the 'credit' sound data has a 0x66 as the second
-                        // byte
-                        else if (m_cpumem[index + 1] == 0x66) {
-                            sound::play(S_DL_CREDIT);
-                            rom_logger::log_sound("credit", g_ldp->get_current_frame());
-                        }
-                        // only the 'buzz' sound data has a 0x99 as its third
-                        // byte
-                        else if (m_cpumem[index + 1] == 0x99) {
-                            sound::play(S_DL_BUZZ);
-                            rom_logger::log_sound("buzz", g_ldp->get_current_frame());
-                        }
-                        // else unknown sound, play an error
-                        else {
+                        if (sound_name == nullptr) {
                             LOGW << "Unknown dragon's lair sound!";
+                        } else if (m_cpumem[index + 1] == 0xD5) {
+                            sound::play(S_DL_ACCEPT);
+                        } else if (m_cpumem[index + 1] == 0x66) {
+                            sound::play(S_DL_CREDIT);
+                        } else if (m_cpumem[index + 1] == 0x99) {
+                            sound::play(S_DL_BUZZ);
                         }
                     }
                 }
@@ -631,7 +629,15 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
             case 0xE036: // 10's position of how many credits are deposited
             case 0xE037: // 1's position of how many credits are deposited
                 m_pScoreboard->update_credits(Addr & 1, Value & 0x0F);
-                rom_logger::log_score(0, Addr & 1, Value & 0x0F, g_ldp->get_current_frame());
+                // credits update every frame — only log when value actually changes
+                {
+                    static uint8_t s_credits[2] = {0xFF, 0xFF};
+                    uint8_t pos = Addr & 1, val = Value & 0x0F;
+                    if (s_credits[pos] != val) {
+                        s_credits[pos] = val;
+                        rom_logger::log_score(0, pos, val, g_ldp->get_current_frame());
+                    }
+                }
                 break;
 
             case 0xE038:
