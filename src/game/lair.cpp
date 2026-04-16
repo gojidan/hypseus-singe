@@ -549,16 +549,19 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
                         // byte
                         if (m_cpumem[index + 1] == 0xD5) {
                             sound::play(S_DL_ACCEPT);
+                            rom_logger::log_sound("accept", g_ldp->get_current_frame());
                         }
                         // only the 'credit' sound data has a 0x66 as the second
                         // byte
                         else if (m_cpumem[index + 1] == 0x66) {
                             sound::play(S_DL_CREDIT);
+                            rom_logger::log_sound("credit", g_ldp->get_current_frame());
                         }
                         // only the 'buzz' sound data has a 0x99 as its third
                         // byte
                         else if (m_cpumem[index + 1] == 0x99) {
                             sound::play(S_DL_BUZZ);
+                            rom_logger::log_sound("buzz", g_ldp->get_current_frame());
                         }
                         // else unknown sound, play an error
                         else {

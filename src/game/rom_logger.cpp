@@ -151,4 +151,13 @@ void log_lives(uint8_t lives, uint32_t frame)
     fflush(s_file);
 }
 
+void log_sound(const char* name, uint32_t frame)
+{
+    if (!s_file) return;
+    fprintf(s_file,
+            "{\"e\":\"sound\",\"snd\":\"%s\",\"f\":%u,\"ms\":%u}\n",
+            name, frame, elapsed_ms());
+    fflush(s_file);
+}
+
 } // namespace rom_logger

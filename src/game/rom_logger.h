@@ -16,6 +16,8 @@
  *   {"e":"disable","move":"UP","f":4720,"ms":350}
  *   {"e":"pause","f":4890,"ms":500}
  *   {"e":"lives","n":4,"f":4890,"ms":501}
+ *   {"e":"sound","snd":"accept","f":4721,"ms":351}
+ *   {"e":"sound","snd":"buzz","f":4721,"ms":351}
  *   {"e":"end","ms":99999}
  */
 
@@ -42,5 +44,11 @@ void log_input_disable(uint8_t move, uint32_t frame); // window closes
 
 // Player state events
 void log_lives(uint8_t lives, uint32_t frame); // lives register updated
+
+// ROM audio feedback — the most direct signal of move acceptance/rejection.
+// name = "accept" | "buzz" | "credit"
+// "accept" means the ROM has confirmed the move was correct.
+// "buzz"   means the ROM has rejected the move (wrong input or wrong timing).
+void log_sound(const char* name, uint32_t frame);
 
 } // namespace rom_logger
