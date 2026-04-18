@@ -29,9 +29,11 @@
 
 // Win32 doesn't use strcasecmp, it uses stricmp (lame)
 #ifdef WIN32
-#define strcasecmp stricmp
+#define strcasecmp  stricmp
+#define strncasecmp strnicmp
 #endif
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +52,7 @@
 #include "../cpu/cpu.h"
 #include "../cpu/generic_z80.h"
 #include "rom_logger.h"
+#include "explorer.h"
 
 bool g_bUsbAnnunciator = false;
 bool g_bBootLog = true;
@@ -518,6 +521,8 @@ void lair::do_nmi()
     else {
         blit();
     }
+
+    explorer::tick();
 }
 
 void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
@@ -684,6 +689,7 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
                 if ((Value != 0xCC) || (m_bUseAnnunciator)) {
                     m_pScoreboard->update_player_lives(Value & 0x0F, 0);
                     rom_logger::log_lives(Value & 0x0F, g_ldp->get_current_frame());
+                    explorer::on_lives(Value & 0x0F);
                 } else {
                     // show cadet skill LED
                     g_skill = 0x3;
@@ -1005,6 +1011,11 @@ bool lair::handle_cmdline_arg(const char *arg)
     if (strcasecmp(arg, "-noscoreboard") == 0) {
         m_video_no_overlay = true;
         bRes               = true;
+    }
+
+    // -explorerR / -explorerL / -explorerU / -explorerD / -explorerB / -explorerN
+    if (strncasecmp(arg, "-explorer", 9) == 0 && arg[9] != '\0') {
+        bRes = explorer::init((char)toupper((unsigned char)arg[9]));
     }
 
     return bRes;

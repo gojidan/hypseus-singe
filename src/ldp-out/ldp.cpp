@@ -44,6 +44,7 @@
 #include "framemod.h"
 #include "ldp.h"
 #include "../game/rom_logger.h"
+#include "../game/explorer.h"
 #include <plog/Log.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -199,6 +200,7 @@ bool ldp::pre_search(const char *pszFrame, bool block_until_search_finishes)
 
     // Log scene jump: from where we were → where we're going
     rom_logger::log_search(m_last_seeked_frame, frame_number);
+    explorer::on_search(m_last_seeked_frame, frame_number);
 
     // notify us if we're still using outdated blocking searching
     if (block_until_search_finishes && m_bVerbose) s1 += " [blocking] ";
