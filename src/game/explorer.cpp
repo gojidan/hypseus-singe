@@ -34,14 +34,22 @@ enum State {
     GAMEOVER        // restarting: waiting before next coin insertion
 };
 
-static bool     s_active     = false;
-static uint8_t  s_switch     = 255;   // SWITCH_* to hold during PLAYING, 255=none
-static char     s_move_char  = 'N';
-static State    s_state      = ATTRACT;
-static uint32_t s_nmi        = 0;
-static uint32_t s_state_nmi  = 0;
-static uint8_t  s_prev_lives = 255;
-static bool     s_move_held  = false;
+// Pulse timing: ROM is edge-triggered — it registers the falling edge
+// (press), not the level. We press for PULSE_PRESS NMIs then release
+// for PULSE_GAP NMIs and repeat, generating one edge every PULSE_PERIOD.
+// At ~70 NMIs/s: period=20 → ~280ms → fires every ~8.5 video frames,
+// catching windows as narrow as ~9 frames.
+#define PULSE_PRESS   5
+#define PULSE_PERIOD  20   // press at 0, release at PULSE_PRESS, next press at PULSE_PERIOD
+
+static bool     s_active      = false;
+static uint8_t  s_switch      = 255;   // SWITCH_* to pulse during PLAYING, 255=none
+static char     s_move_char   = 'N';
+static State    s_state       = ATTRACT;
+static uint32_t s_nmi         = 0;
+static uint32_t s_state_nmi   = 0;
+static uint8_t  s_prev_lives  = 255;
+static bool     s_move_held   = false;  // true while move is currently pressed
 
 // Circular buffer of recent search destinations for stuck detection
 static uint32_t s_recent_to[STUCK_WINDOW];
@@ -181,13 +189,9 @@ Action tick()
 
     case START_WAIT:
         if (elapsed >= BOOT_WAIT) {
-            if (s_switch != 255) {
-                fprintf(stderr, "[explorer] holding move '%c' (switch %u)\n",
-                        s_move_char, (unsigned)s_switch);
-                fflush(stderr);
-                action.press = s_switch;
-                s_move_held  = true;
-            }
+            fprintf(stderr, "[explorer] PLAYING: pulsing move '%c' (switch %u) every %d NMIs\n",
+                    s_move_char, (unsigned)s_switch, PULSE_PERIOD);
+            fflush(stderr);
             s_prev_lives = 255;
             memset(s_recent_to, 0, sizeof(s_recent_to));
             enter_state(PLAYING);
@@ -195,10 +199,22 @@ Action tick()
         break;
 
     case PLAYING:
+        // Pulse the move: press for PULSE_PRESS NMIs, release, repeat every PULSE_PERIOD.
+        // The ROM is edge-triggered — it registers the falling edge (press) not the level.
+        if (s_switch != 255) {
+            uint32_t phase = elapsed % PULSE_PERIOD;
+            if (phase == 0) {
+                action.press = s_switch;
+                s_move_held  = true;
+            } else if (phase == PULSE_PRESS && s_move_held) {
+                action.release = s_switch;
+                s_move_held    = false;
+            }
+        }
         break;
 
     case GAMEOVER:
-        // Release move on first tick
+        // Ensure move is released on first GAMEOVER tick
         if (elapsed == 1 && s_move_held && s_switch != 255) {
             action.release = s_switch;
             s_move_held    = false;
