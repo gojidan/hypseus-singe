@@ -2,26 +2,36 @@
 #include "../io/input.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
-// NMI fires every ~32.768 ms (LAIR_IRQ_PERIOD), so ~30 NMIs per second.
-// All timing constants below are expressed in NMI ticks.
-#define NMI_HZ        30
-#define COIN_HOLD     (10 * NMI_HZ / 10)  // hold coin input for ~0.33 s
-#define COIN_GAP      (4  * NMI_HZ)        // 4 s after coin before START
-#define START_HOLD    (10 * NMI_HZ / 10)  // hold start input for ~0.33 s
-#define BOOT_WAIT     (12 * NMI_HZ)        // 12 s for disk seek + logo sequence
-#define GAMEOVER_WAIT (12 * NMI_HZ)        // 12 s for game-over screen to clear
+// NMI fires every ~25-33 ms depending on emulation speed.
+// We use ~40 NMIs/s based on observed timing (measured: 150 NMIs in ~3.7 s).
+// Timing constants are deliberately generous to be safe on any speed.
+#define NMI_HZ        40
+#define COIN_HOLD     (NMI_HZ / 4)    // hold coin for ~0.25 s
+#define COIN_GAP      (2 * NMI_HZ)    // 2 s between coin and next action
+#define START_HOLD    (NMI_HZ / 4)    // hold start for ~0.25 s
+#define BOOT_WAIT     (10 * NMI_HZ)   // 10 s: disk seek + logo sequence
+#define GAMEOVER_WAIT (10 * NMI_HZ)   // 10 s: wait for attract before restart
+
+// Stuck detection: if the same `to` frame appears this many times in the
+// last STUCK_WINDOW searches while PLAYING, we are in an infinite loop
+// (e.g. elevator scene with wrong move + infinite lives).
+#define STUCK_WINDOW  6
+#define STUCK_COUNT   4
 
 namespace explorer {
 
 enum State {
-    ATTRACT,        // waiting to insert coin
-    COIN_PRESSED,   // coin input held
-    COIN_WAIT_ST,   // coin released, waiting before START
-    START_PRESSED,  // START1 held
-    START_WAIT_ST,  // START1 released, waiting for game to load
-    PLAYING,        // move held, waiting for game over
-    GAMEOVER        // game over, waiting to restart
+    ATTRACT,        // waiting to insert first coin
+    COIN1_PRESS,    // first coin held
+    COIN1_WAIT,     // first coin released, short gap
+    COIN2_PRESS,    // second coin held
+    COIN2_WAIT,     // second coin released, waiting before START
+    START_PRESS,    // START1 held
+    START_WAIT,     // START1 released, waiting for game to load
+    PLAYING,        // move held — waiting for game over or stuck detection
+    GAMEOVER        // restarting: waiting before next coin insertion
 };
 
 static bool     s_active     = false;
@@ -32,6 +42,10 @@ static uint32_t s_nmi        = 0;
 static uint32_t s_state_nmi  = 0;
 static uint8_t  s_prev_lives = 255;
 static bool     s_move_held  = false;
+
+// Circular buffer of recent search destinations for stuck detection
+static uint32_t s_recent_to[STUCK_WINDOW];
+static int      s_recent_idx = 0;
 
 static const Action NO_ACTION = { 255, 255 };
 
@@ -58,6 +72,7 @@ bool init(char move_char)
     }
     s_move_char = move_char;
     s_active    = true;
+    memset(s_recent_to, 0, sizeof(s_recent_to));
     fprintf(stderr, "[explorer] armed: move=%c switch=%u\n",
             move_char, (unsigned)s_switch);
     fflush(stderr);
@@ -74,7 +89,6 @@ void on_lives(uint8_t n)
     if (s_state == PLAYING && n == 0 && s_prev_lives > 0 && s_prev_lives != 255) {
         fprintf(stderr, "[explorer] GAME OVER (lives 0)\n");
         fflush(stderr);
-        // move release will be emitted by tick() on next GAMEOVER tick
         s_move_held = false;
         enter_state(GAMEOVER);
     }
@@ -84,7 +98,27 @@ void on_lives(uint8_t n)
 
 void on_search(uint32_t from, uint32_t to)
 {
-    (void)from; (void)to;  // reserved for future can_pass routing
+    (void)from;
+    if (!s_active || s_state != PLAYING) return;
+
+    // Record destination in circular buffer
+    s_recent_to[s_recent_idx] = to;
+    s_recent_idx = (s_recent_idx + 1) % STUCK_WINDOW;
+
+    // Count how many of the last STUCK_WINDOW searches went to the same frame
+    int count = 0;
+    for (int i = 0; i < STUCK_WINDOW; i++) {
+        if (s_recent_to[i] == to) count++;
+    }
+
+    if (count >= STUCK_COUNT) {
+        fprintf(stderr, "[explorer] STUCK at frame %u (%d/%d) — forcing restart\n",
+                to, count, STUCK_WINDOW);
+        fflush(stderr);
+        s_move_held = false;
+        memset(s_recent_to, 0, sizeof(s_recent_to));
+        enter_state(GAMEOVER);
+    }
 }
 
 Action tick()
@@ -98,39 +132,54 @@ Action tick()
     switch (s_state) {
 
     case ATTRACT:
-        // Wait 8 seconds for ROM to reach attract-mode coin-accept state
         if (elapsed == 8 * NMI_HZ) {
-            fprintf(stderr, "[explorer] inserting coin\n");
+            fprintf(stderr, "[explorer] inserting coin 1\n");
             fflush(stderr);
             action.press = SWITCH_COIN1;
-            enter_state(COIN_PRESSED);
+            enter_state(COIN1_PRESS);
         }
         break;
 
-    case COIN_PRESSED:
+    case COIN1_PRESS:
         if (elapsed >= COIN_HOLD) {
             action.release = SWITCH_COIN1;
-            enter_state(COIN_WAIT_ST);
+            enter_state(COIN1_WAIT);
         }
         break;
 
-    case COIN_WAIT_ST:
+    case COIN1_WAIT:
+        if (elapsed >= COIN_GAP) {
+            fprintf(stderr, "[explorer] inserting coin 2\n");
+            fflush(stderr);
+            action.press = SWITCH_COIN1;
+            enter_state(COIN2_PRESS);
+        }
+        break;
+
+    case COIN2_PRESS:
+        if (elapsed >= COIN_HOLD) {
+            action.release = SWITCH_COIN1;
+            enter_state(COIN2_WAIT);
+        }
+        break;
+
+    case COIN2_WAIT:
         if (elapsed >= COIN_GAP) {
             fprintf(stderr, "[explorer] pressing START1\n");
             fflush(stderr);
             action.press = SWITCH_START1;
-            enter_state(START_PRESSED);
+            enter_state(START_PRESS);
         }
         break;
 
-    case START_PRESSED:
+    case START_PRESS:
         if (elapsed >= START_HOLD) {
             action.release = SWITCH_START1;
-            enter_state(START_WAIT_ST);
+            enter_state(START_WAIT);
         }
         break;
 
-    case START_WAIT_ST:
+    case START_WAIT:
         if (elapsed >= BOOT_WAIT) {
             if (s_switch != 255) {
                 fprintf(stderr, "[explorer] holding move '%c' (switch %u)\n",
@@ -140,16 +189,16 @@ Action tick()
                 s_move_held  = true;
             }
             s_prev_lives = 255;
+            memset(s_recent_to, 0, sizeof(s_recent_to));
             enter_state(PLAYING);
         }
         break;
 
     case PLAYING:
-        // Move is held. on_lives(0) triggers transition to GAMEOVER.
         break;
 
     case GAMEOVER:
-        // Release move on first GAMEOVER tick if still held
+        // Release move on first tick
         if (elapsed == 1 && s_move_held && s_switch != 255) {
             action.release = s_switch;
             s_move_held    = false;
