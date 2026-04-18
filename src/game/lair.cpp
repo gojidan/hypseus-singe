@@ -522,7 +522,11 @@ void lair::do_nmi()
         blit();
     }
 
-    explorer::tick();
+    // Apply explorer actions via this->input_enable/disable so coins bypass
+    // the coin queue and write directly to the ROM hardware registers.
+    explorer::Action expl = explorer::tick();
+    if (expl.press   != 255) this->input_enable (expl.press,   NOMOUSE);
+    if (expl.release != 255) this->input_disable(expl.release, NOMOUSE);
 }
 
 void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
