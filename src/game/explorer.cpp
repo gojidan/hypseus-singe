@@ -18,7 +18,7 @@
 // last STUCK_WINDOW searches while PLAYING, we are in an infinite loop
 // (e.g. elevator scene with wrong move + infinite lives).
 #define STUCK_WINDOW  6
-#define STUCK_COUNT   4
+#define STUCK_COUNT   3
 
 namespace explorer {
 
