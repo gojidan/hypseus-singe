@@ -525,8 +525,10 @@ void lair::do_nmi()
     // Apply explorer actions via this->input_enable/disable so coins bypass
     // the coin queue and write directly to the ROM hardware registers.
     explorer::Action expl = explorer::tick();
-    if (expl.press   != 255) this->input_enable (expl.press,   NOMOUSE);
-    if (expl.release != 255) this->input_disable(expl.release, NOMOUSE);
+    for (int _s = 0; _s < SWITCH_COUNT; _s++) {
+        if (expl.press_mask   & (1u << _s)) this->input_enable (_s, NOMOUSE);
+        if (expl.release_mask & (1u << _s)) this->input_disable(_s, NOMOUSE);
+    }
 }
 
 void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
@@ -1018,8 +1020,17 @@ bool lair::handle_cmdline_arg(const char *arg)
     }
 
     // -explorerR / -explorerL / -explorerU / -explorerD / -explorerB / -explorerN
-    if (strncasecmp(arg, "-explorer", 9) == 0 && arg[9] != '\0') {
-        bRes = explorer::init((char)toupper((unsigned char)arg[9]));
+    // Optional delay in seconds appended as integer: -explorerR5  (move=R, delay=5s)
+    // -explorerG          guided mode (correct move per scene, delta=0)
+    // -explorerG10        guided, +10 disc frames later  (probe window end)
+    // -explorerG-10       guided, -10 disc frames earlier (probe window start)
+    if (strncasecmp(arg, "-explorerG", 10) == 0) {
+        int32_t delta = arg[10] != '\0' ? (int32_t)atoi(arg + 10) : 0;
+        bRes = explorer::init_guided(delta);
+    } else if (strncasecmp(arg, "-explorer", 9) == 0 && arg[9] != '\0') {
+        char     move  = (char)toupper((unsigned char)arg[9]);
+        uint32_t delay = arg[10] != '\0' ? (uint32_t)atoi(arg + 10) : 0;
+        bRes = explorer::init(move, delay);
     }
 
     return bRes;
