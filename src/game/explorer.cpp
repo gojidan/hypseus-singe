@@ -116,7 +116,7 @@ static const SceneInfo SCENE_TABLE[] = {
     // Fire Pit (reversed)
     // Slot 1 accept at disc 12835. Seq3 noseek window 27-44f from ~12837 = 12864-12881 (midpoint 12872 = +147).
     // Slots 3-4 recalculated from seq4/seq5 noseek starts; previous 156/203/248 were at window boundaries.
-    { 12725, 4, {{MASK_L,  110}, {MASK_L,  147}, {MASK_L, 182}, {MASK_L, 212}} },
+    { 12725, 4, {{MASK_L,  110}, {MASK_L,  156}, {MASK_L, 203}, {MASK_L, 248}} },
 
     // Yellow Brick Road (reversed)
     { 13303, 9, {{MASK_R,   41}, {MASK_U,   89}, {MASK_L, 141}, {MASK_U, 185},
@@ -158,7 +158,7 @@ static const SceneInfo SCENE_TABLE[] = {
     // After U@90: ROM seeks 19614→19628. Seq3@19628 B window is 73-86f (disc 19701-19714).
     // Old B@174 fired at disc 19694 = offset 66 from 19628 → pre-window → buzz.
     // Fixed: B@187 = disc 19707 = offset 79 from 19628, safely inside window 73-86.
-    { 19520, 4, {{MASK_U,   90}, {MASK_B,  187}, {MASK_D, 242}, {MASK_U, 298}} },
+    { 19520, 4, {{MASK_U,   90}, {MASK_B,  187}, {MASK_D, 275}, {MASK_U, 307}} },
 
     // Note: smithee_reversed (Forge reversed, frame 15653) is already in the table above.
     // 19628 is a Socker Boppers rev sub-seek target — no entry here prevents false scene-switch.
@@ -190,7 +190,7 @@ static const SceneInfo SCENE_TABLE[] = {
     // Slot 7 U@442 fired at disc 24820 = ~60f into seq8, but landed in death zone boundary.
     // seq8 UP success window is 46-63f from start (~24762); fixed to U@436 = disc 24814 = ~52f.
     { 24378, 9, {{MASK_B,  128}, {MASK_U,  217}, {MASK_U, 245}, {MASK_U, 302},
-                 {MASK_U,  335}, {MASK_U,  382}, {MASK_U, 436}, {MASK_U, 500},
+                 {MASK_U,  335}, {MASK_U,  382}, {MASK_U, 442}, {MASK_U, 500},
                  {MASK_U,  620}} },
 
     // Knight & Light (Black Knight / horse)
