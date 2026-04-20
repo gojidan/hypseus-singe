@@ -375,9 +375,11 @@ void on_search(uint32_t from, uint32_t to)
             fprintf(stderr, "[explorer] guided: scene frame=%u slots=%d  delta=%+d\n",
                     to, scene->slot_count, s_delta_frames);
             fflush(stderr);
-        } else if (s_scene) {
+        } else if (s_scene && !s_held_mask) {
             // Sub-seek within the current scene: disc jumped to `to`.
-            // Skip any slots whose target frame the disc has already passed.
+            // Skip slots whose target frame the disc has already passed.
+            // Guard: if s_held_mask is set we just pressed this slot — the seek
+            // is the ROM's reaction to our correct press, not a skip of an unpressed slot.
             while (s_slot < s_scene->slot_count) {
                 uint32_t target = slot_target_frame(s_scene_start_frame,
                                                      s_scene->slots[s_slot].frame_offset,
@@ -390,7 +392,7 @@ void on_search(uint32_t from, uint32_t to)
                 } else break;
             }
             if (s_slot >= s_scene->slot_count) {
-                fprintf(stderr, "[explorer] guided: all slots skipped after sub-seek, waiting for next scene\n");
+                fprintf(stderr, "[explorer] guided: all slots done after sub-seek, waiting for next scene\n");
                 fflush(stderr);
                 s_scene = nullptr;
             }
