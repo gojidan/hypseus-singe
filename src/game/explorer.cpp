@@ -520,7 +520,15 @@ Action tick(uint32_t current_disc_frame)
                                                            slot.frame_offset,
                                                            s_delta_frames);
 
-                if (current_disc_frame >= target_frame && slot.mask) {
+                // Guard: if the disc is far above the scene start, we are still
+                // seeking backward to this scene (current_disc_frame is the
+                // pre-seek value, which can be >> target_frame).  Don't fire
+                // until the disc has physically arrived at the scene area.
+                // 2000 frames ≈ 83 s — comfortably covers the longest DL scene.
+                bool disc_arrived = (current_disc_frame >= s_scene_start_frame &&
+                                     current_disc_frame < s_scene_start_frame + 2000u);
+
+                if (disc_arrived && current_disc_frame >= target_frame && slot.mask) {
                     action.press_mask = slot.mask;
                     s_held_mask       = slot.mask;
                     s_hold_end_nmi    = s_nmi + PULSE_PRESS;
