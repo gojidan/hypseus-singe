@@ -337,7 +337,9 @@ void on_lives(uint8_t n)
     if (!s_active) return;
     if (n == 15) return;  // 0xFF & 0x0F = 15 during ROM boot init
 
-    if (s_state == PLAYING && n == 0 && s_prev_lives > 0 && s_prev_lives != 255) {
+    // In guided mode the ROM sends transient lives=0 during death animations;
+    // ignore it — guided runs self-terminate via scene/attract logic.
+    if (!s_guided && s_state == PLAYING && n == 0 && s_prev_lives > 0 && s_prev_lives != 255) {
         fprintf(stderr, "[explorer] GAME OVER (lives 0)\n");
         fflush(stderr);
         s_move_held = false;
@@ -496,8 +498,9 @@ Action tick(uint32_t current_disc_frame)
         break;
 
     case PLAYING: {
-        // Backstop: if stuck in PLAYING for >3 minutes, force restart.
-        if (elapsed >= 3 * 60 * NMI_HZ) {
+        // Backstop: if stuck in PLAYING for >3 minutes, force restart (free mode only;
+        // guided runs can last 30–60 min so we skip this timeout entirely).
+        if (!s_guided && elapsed >= 3 * 60 * NMI_HZ) {
             fprintf(stderr, "[explorer] PLAYING TIMEOUT (%u NMIs) — forcing restart\n", elapsed);
             fflush(stderr);
             s_move_held = false;
