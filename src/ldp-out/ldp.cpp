@@ -181,6 +181,7 @@ bool ldp::pre_search(const char *pszFrame, bool block_until_search_finishes)
         if (m_bVerbose) {
             LOGI << "ignoring seek because we're already on that frame";
         }
+        explorer::on_search(m_last_seeked_frame, frame_number);
         m_status = LDP_PAUSED; // just to be safe
         return true;
     }

@@ -56,7 +56,7 @@ static const SceneInfo SCENE_TABLE[] = {
     { 2353,  6, {{MASK_B,   71}, {MASK_U,  136}, {MASK_R, 181},
                  {MASK_D,  225}, {MASK_L,  291}, {MASK_U, 342}} },
 
-    // Spiral Staircase (Giddy Goons)
+    // Snake Room (snake_room — tentacle_room alternate, row 7 col 2)
     { 3097,  4, {{MASK_B,   53}, {MASK_B,   98}, {MASK_B, 137}, {MASK_U, 159}} },
 
     // Fire Pit (ropes)
@@ -67,12 +67,12 @@ static const SceneInfo SCENE_TABLE[] = {
                  {MASK_L,  236}, {MASK_U,  283}, {MASK_B, 363}, {MASK_R, 400},
                  {MASK_U,  441}} },
 
-    // Wizard's Chamber (Acid Creature / Cauldron Wizard)
+    // Bubbling Cauldron / Acid Creature (bubbling_cauldron — tentacle_room row 7 col 3)
     // Note: first two slots are a buzz B followed immediately by the correct U.
     { 5123,  6, {{MASK_B,   58}, {MASK_U,   64}, {MASK_B, 116}, {MASK_D, 154},
                  {MASK_B,  183}, {MASK_R,  250}} },
 
-    // Catwalk (bats)
+    // Giddy Goons (giddy_goons — flattening_staircase alternate, row 8 col 2)
     // Note: logged sequence B,R,R,B,U — differs from levels.json U,U+L,B,R,R.
     //       The log is authoritative for the guided explorer.
     { 5683,  5, {{MASK_B,   58}, {MASK_R,   97}, {MASK_R, 107},
@@ -109,7 +109,7 @@ static const SceneInfo SCENE_TABLE[] = {
     { 11489, 6, {{MASK_U,   61}, {MASK_B,  103}, {MASK_U, 139},
                  {MASK_B,  181}, {MASK_L,  226}, {MASK_B, 262}} },
 
-    // Chapel (reversed) — 5 slots, complete (scene has fewer windows than normal Chapel)
+    // Catwalk Bats (catwalk_bats — yellow_brick_road row 9 col 3)
     { 12190, 5, {{MASK_U,   47}, {MASK_U,   87}, {MASK_B, 140},
                  {MASK_R,  177}, {MASK_R,  211}} },
 
@@ -127,7 +127,7 @@ static const SceneInfo SCENE_TABLE[] = {
     // Elevator Floor (3-level and 9-level share this frame start)
     { 14847, 1, {{MASK_L,  156}} },
 
-    // Mist Room (snakes)
+    // Forge Reversed (smithee_reversed — smithee row 6 col 2)
     { 15653, 5, {{MASK_B,   62}, {MASK_B,  131}, {MASK_R, 172},
                  {MASK_B,  242}, {MASK_B,  376}} },
 
@@ -152,15 +152,21 @@ static const SceneInfo SCENE_TABLE[] = {
     // from ms timestamps (not disc frame delta) to account for seek latency.
     { 19520, 4, {{MASK_U,   90}, {MASK_B,  174}, {MASK_D, 242}, {MASK_U, 298}} },
 
-    // Forge (reversed) — NOT played in the logged run (cycle randomness).
-    // Entry omitted: no real data.  19628 is also a Socker Boppers rev sub-seek
-    // target; keeping it out of the table prevents a false scene-switch there.
+    // Note: smithee_reversed (Forge reversed, frame 15653) is already in the table above.
+    // 19628 is a Socker Boppers rev sub-seek target — no entry here prevents false scene-switch.
 
-    // Throne Room
+    // Tilting Room (tilting_room — row 11 col 2) — PROVISIONAL: DirkSimple-derived,
+    // not verified by ROM log. Our reference run played throne_room for this row,
+    // so explorerG will never seek here. Offsets: D@90 (enter_room 3768ms→90fr),
+    // U@119 (jumps_back 885-1540ms midpoint), L@139 (jumps_forward 492-1049ms midpoint).
+    { 20187, 3, {{MASK_D,   90}, {MASK_U,  119}, {MASK_L,  139}} },
+
+    // Throne Room (throne_room — row 11 col 1)
     // Levels.json move "U,R" is split into two ROM windows: U@78 then R@87.
     { 20674, 4, {{MASK_R,   52}, {MASK_U,   78}, {MASK_R,  87}, {MASK_R, 199}} },
 
-    // Tilting Room — 10 ROM windows logged (levels.json shows only 3; log is authoritative)
+    // Chapel Reversed (robot_knight_reversed — row 10 col 2)
+    // 10 slots across noseek sequences; our log captured all from a cycle-2 visit.
     { 21212,10, {{MASK_L,   92}, {MASK_R,  129}, {MASK_U, 167}, {MASK_R, 211},
                  {MASK_L,  253}, {MASK_L,  263}, {MASK_R, 290}, {MASK_L, 315},
                  {MASK_B,  365}, {MASK_B,  378}} },
