@@ -243,6 +243,7 @@ static uint8_t  s_prev_lives  = 255;
 static const SceneInfo* s_scene       = nullptr; // current scene entry, null = unknown
 static uint32_t         s_scene_start_frame = 0; // disc frame when scene seek fired
 static int              s_slot        = 0;        // next slot index to press
+static bool             s_waiting_arrival = false; // true during backward seek to scene
 static uint32_t         s_held_mask   = 0;        // bitmask currently held in guided mode
 static uint32_t         s_hold_end_nmi = 0;       // NMI at which to release held buttons
 
@@ -318,6 +319,7 @@ bool init_guided(int32_t delta_frames)
     s_scene_start_frame = 0;
     s_slot              = 0;
     s_held_mask         = 0;
+    s_waiting_arrival   = false;
     memset(s_recent_to, 0, sizeof(s_recent_to));
     fprintf(stderr, "[explorer] guided mode: delta=%+d frames  scenes=%d\n",
             delta_frames, SCENE_TABLE_COUNT);
@@ -346,7 +348,6 @@ void on_lives(uint8_t n)
 
 void on_search(uint32_t from, uint32_t to)
 {
-    (void)from;
     if (!s_active) return;
 
     // Stuck detection (simple mode)
@@ -378,8 +379,13 @@ void on_search(uint32_t from, uint32_t to)
             s_scene_start_frame = to;
             s_slot              = 0;
             s_held_mask         = 0;
-            fprintf(stderr, "[explorer] guided: scene frame=%u slots=%d  delta=%+d\n",
-                    to, scene->slot_count, s_delta_frames);
+            // If seeking backward (from > to) the disc hasn't arrived yet —
+            // current_disc_frame is still the old high value.  Suppress slot
+            // firing until the disc physically arrives at the scene start.
+            s_waiting_arrival   = (from > to);
+            fprintf(stderr, "[explorer] guided: scene frame=%u slots=%d  delta=%+d%s\n",
+                    to, scene->slot_count, s_delta_frames,
+                    s_waiting_arrival ? " [await arrival]" : "");
             fflush(stderr);
         } else if (s_scene && !s_held_mask) {
             // Sub-seek within the current scene: disc jumped to `to`.
@@ -480,6 +486,7 @@ Action tick(uint32_t current_disc_frame)
             s_scene_start_frame = 0;
             s_slot              = 0;
             s_held_mask         = 0;
+            s_waiting_arrival   = false;
             memset(s_recent_to, 0, sizeof(s_recent_to));
             enter_state(PLAYING);
         }
@@ -514,21 +521,24 @@ Action tick(uint32_t current_disc_frame)
                 break;
             }
 
-            if (s_scene && s_slot < s_scene->slot_count && !s_held_mask) {
+            // For backward seeks, wait until disc physically arrives at the
+            // scene start before evaluating any slots.
+            if (s_waiting_arrival) {
+                if (current_disc_frame <= s_scene_start_frame + 10u) {
+                    s_waiting_arrival = false;
+                    fprintf(stderr, "[explorer] guided: arrived at scene %u (disc=%u)\n",
+                            s_scene_start_frame, current_disc_frame);
+                    fflush(stderr);
+                }
+            }
+
+            if (s_scene && s_slot < s_scene->slot_count && !s_held_mask && !s_waiting_arrival) {
                 const SlotInfo& slot = s_scene->slots[s_slot];
                 uint32_t target_frame = slot_target_frame(s_scene_start_frame,
                                                            slot.frame_offset,
                                                            s_delta_frames);
 
-                // Guard: if the disc is far above the scene start, we are still
-                // seeking backward to this scene (current_disc_frame is the
-                // pre-seek value, which can be >> target_frame).  Don't fire
-                // until the disc has physically arrived at the scene area.
-                // 2000 frames ≈ 83 s — comfortably covers the longest DL scene.
-                bool disc_arrived = (current_disc_frame >= s_scene_start_frame &&
-                                     current_disc_frame < s_scene_start_frame + 2000u);
-
-                if (disc_arrived && current_disc_frame >= target_frame && slot.mask) {
+                if (current_disc_frame >= target_frame && slot.mask) {
                     action.press_mask = slot.mask;
                     s_held_mask       = slot.mask;
                     s_hold_end_nmi    = s_nmi + PULSE_PRESS;
