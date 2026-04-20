@@ -80,9 +80,9 @@ static const SceneInfo SCENE_TABLE[] = {
     { 6375,  4, {{MASK_L,   49}, {MASK_B,  110}, {MASK_L, 143}, {MASK_L, 210}} },
 
     // Forge (Smithee — smithee, row 6 col 1)
-    // Verified: human run 20260420. Slots 4-5 corrected (old 242/386 were post-window).
+    // Verified: human run 20260420. Slot 5 B@374: bot fired at 368 (pre-window), missed.
     { 6994,  5, {{MASK_B,   65}, {MASK_B,  129}, {MASK_L, 175},
-                 {MASK_B,  235}, {MASK_B,  368}} },
+                 {MASK_B,  235}, {MASK_B,  374}} },
 
     // Socker Boppers (grim_reaper — row 5 col 3)
     // Verified: human run 20260420. B@221 buzzed (edge of window); B@230 is safe.
@@ -139,9 +139,11 @@ static const SceneInfo SCENE_TABLE[] = {
                  {MASK_R,  268}, {MASK_R,  303}} },
 
     // Pot of Gold (Lizard King)
-    { 17264,12, {{MASK_L,   43}, {MASK_R,  145}, {MASK_R, 234}, {MASK_R, 282},
-                 {MASK_R,  398}, {MASK_R,  448}, {MASK_U, 488}, {MASK_B, 530},
-                 {MASK_B,  540}, {MASK_B,  572}, {MASK_B, 596}, {MASK_B, 641}} },
+    // U@488 confirmed in clean run. U@492 is backup for runs with shifted timer state.
+    { 17264,13, {{MASK_L,   43}, {MASK_R,  145}, {MASK_R, 234}, {MASK_R, 282},
+                 {MASK_R,  398}, {MASK_R,  448}, {MASK_U, 488}, {MASK_U, 492},
+                 {MASK_B,  530}, {MASK_B,  540}, {MASK_B, 572}, {MASK_B, 596},
+                 {MASK_B,  641}} },
 
     // Wizard's Kitchen (Drink Me)
     { 18282, 1, {{MASK_R,   32}} },
