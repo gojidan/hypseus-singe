@@ -116,7 +116,7 @@ static const SceneInfo SCENE_TABLE[] = {
     // Fire Pit (reversed)
     // Slot 1 accept at disc 12835. Seq3 noseek window 27-44f from ~12837 = 12864-12881 (midpoint 12872 = +147).
     // Slots 3-4 recalculated from seq4/seq5 noseek starts; previous 156/203/248 were at window boundaries.
-    { 12725, 4, {{MASK_L,  110}, {MASK_L,  154}, {MASK_L, 203}, {MASK_L, 248}} },
+    { 12725, 4, {{MASK_L,  110}, {MASK_L,  158}, {MASK_L, 203}, {MASK_L, 248}} },
 
     // Yellow Brick Road (reversed)
     { 13303, 9, {{MASK_R,   41}, {MASK_U,   89}, {MASK_L, 141}, {MASK_U, 185},
