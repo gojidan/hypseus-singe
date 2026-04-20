@@ -79,9 +79,10 @@ static const SceneInfo SCENE_TABLE[] = {
     // YMCA Room (flattening stairs)
     { 6375,  4, {{MASK_L,   49}, {MASK_B,  110}, {MASK_L, 143}, {MASK_L, 210}} },
 
-    // Forge (Smithee)
+    // Forge (Smithee — smithee, row 6 col 1)
+    // Verified: human run 20260420. Slots 4-5 corrected (old 242/386 were post-window).
     { 6994,  5, {{MASK_B,   65}, {MASK_B,  129}, {MASK_L, 175},
-                 {MASK_B,  242}, {MASK_B,  386}} },
+                 {MASK_B,  235}, {MASK_B,  368}} },
 
     // Socker Boppers (grim_reaper — row 5 col 3)
     // Verified: human run 20260420. B@221 buzzed (edge of window); B@230 is safe.
@@ -123,8 +124,11 @@ static const SceneInfo SCENE_TABLE[] = {
     // Giant Bat
     { 14327, 4, {{MASK_B,   17}, {MASK_L,   46}, {MASK_U, 104}, {MASK_B, 163}} },
 
-    // Elevator Floor (3-level and 9-level share this frame start)
-    { 14847, 1, {{MASK_L,  156}} },
+    // Elevator Floor (falling_platform_short / falling_platform_long start)
+    // 3-floor version: no window at floors 1-2, window opens at floor 3 (offset 360).
+    // 9-floor version: window opens at floor 1 (offset ~154). Slot 1 fires but misses for
+    // 3-floor (no enable); slot 2 catches the floor-3 window in both cases.
+    { 14847, 2, {{MASK_L,  156}, {MASK_L,  360}} },
 
     // Forge Reversed (smithee_reversed — smithee row 6 col 2)
     { 15653, 5, {{MASK_B,   62}, {MASK_B,  131}, {MASK_R, 172},
