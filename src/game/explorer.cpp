@@ -73,10 +73,8 @@ static const SceneInfo SCENE_TABLE[] = {
                  {MASK_B,  183}, {MASK_R,  250}} },
 
     // Giddy Goons (giddy_goons — flattening_staircase alternate, row 8 col 2)
-    // Note: logged sequence B,R,R,B,U — differs from levels.json U,U+L,B,R,R.
-    //       The log is authoritative for the guided explorer.
-    { 5683,  5, {{MASK_B,   58}, {MASK_R,   97}, {MASK_R, 107},
-                 {MASK_B,  155}, {MASK_U,  197}} },
+    // Verified: human run 20260420. Buzz R@100 dropped (not needed to pass scene).
+    { 5683,  4, {{MASK_B,   66}, {MASK_R,  111}, {MASK_B, 163}, {MASK_U, 201}} },
 
     // YMCA Room (flattening stairs)
     { 6375,  4, {{MASK_L,   49}, {MASK_B,  110}, {MASK_L, 143}, {MASK_L, 210}} },
@@ -85,8 +83,9 @@ static const SceneInfo SCENE_TABLE[] = {
     { 6994,  5, {{MASK_B,   65}, {MASK_B,  129}, {MASK_L, 175},
                  {MASK_B,  242}, {MASK_B,  386}} },
 
-    // Socker Boppers (Grim Reaper)
-    { 8004,  4, {{MASK_U,   73}, {MASK_B,  221}, {MASK_D, 289}, {MASK_U, 349}} },
+    // Socker Boppers (grim_reaper — row 5 col 3)
+    // Verified: human run 20260420. B@221 buzzed (edge of window); B@230 is safe.
+    { 8004,  4, {{MASK_U,   77}, {MASK_B,  230}, {MASK_D, 281}, {MASK_U, 350}} },
 
     // Breathing Door (wind room)
     { 8709,  1, {{MASK_R,  180}} },
@@ -155,11 +154,9 @@ static const SceneInfo SCENE_TABLE[] = {
     // Note: smithee_reversed (Forge reversed, frame 15653) is already in the table above.
     // 19628 is a Socker Boppers rev sub-seek target — no entry here prevents false scene-switch.
 
-    // Tilting Room (tilting_room — row 11 col 2) — PROVISIONAL: DirkSimple-derived,
-    // not verified by ROM log. Our reference run played throne_room for this row,
-    // so explorerG will never seek here. Offsets: D@90 (enter_room 3768ms→90fr),
-    // U@119 (jumps_back 885-1540ms midpoint), L@139 (jumps_forward 492-1049ms midpoint).
-    { 20187, 3, {{MASK_D,   90}, {MASK_U,  119}, {MASK_L,  139}} },
+    // Tilting Room (tilting_room — row 11 col 2)
+    // Verified: human run 20260420. Visit 1: D@97+U@128 → death (missed L). Visit 2: D@95+U@130+L@164 → success.
+    { 20187, 3, {{MASK_D,   95}, {MASK_U,  130}, {MASK_L,  164}} },
 
     // Throne Room (throne_room — row 11 col 1)
     // Levels.json move "U,R" is split into two ROM windows: U@78 then R@87.
