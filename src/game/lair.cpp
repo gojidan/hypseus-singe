@@ -524,7 +524,7 @@ void lair::do_nmi()
 
     // Apply explorer actions via this->input_enable/disable so coins bypass
     // the coin queue and write directly to the ROM hardware registers.
-    explorer::Action expl = explorer::tick();
+    explorer::Action expl = explorer::tick((uint32_t)g_ldp->get_current_frame());
     for (int _s = 0; _s < SWITCH_COUNT; _s++) {
         if (expl.press_mask   & (1u << _s)) this->input_enable (_s, NOMOUSE);
         if (expl.release_mask & (1u << _s)) this->input_disable(_s, NOMOUSE);

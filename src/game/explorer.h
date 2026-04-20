@@ -56,8 +56,10 @@ bool init_guided(int32_t delta_frames = 0);
 bool is_active();
 
 // Drive the state machine — call once from lair::do_nmi().
-// Returns an Action for lair to apply via this->input_enable/disable.
-Action tick();
+// current_disc_frame: pass g_ldp->get_current_frame() — used by guided mode
+// to fire at the exact same disc frame as the reference human run, independent
+// of NMI rate fluctuations.
+Action tick(uint32_t current_disc_frame);
 
 // Notify lives register change — call from cpu_mem_write at 0xE03E.
 void on_lives(uint8_t n);

@@ -14,9 +14,6 @@
 #define BOOT_WAIT     (10 * NMI_HZ)   // 10 s: disk seek + logo sequence
 #define GAMEOVER_WAIT (10 * NMI_HZ)   // 10 s: wait for attract before restart
 
-// Disc frame rate (Dragon's Lair / Space Ace laserdisc).
-#define DISC_FPS  24
-
 // Stuck detection: if the same `to` frame appears this many times in the
 // last STUCK_WINDOW searches while PLAYING, we are in an infinite loop.
 #define STUCK_WINDOW  6
@@ -237,11 +234,11 @@ static uint32_t s_state_nmi   = 0;
 static uint8_t  s_prev_lives  = 255;
 
 // Guided mode scene tracking
-static const SceneInfo* s_scene    = nullptr; // current scene entry, null = unknown
-static uint32_t         s_scene_start_nmi = 0; // NMI when current scene seek fired
-static int              s_slot     = 0;        // next slot index to press
-static uint32_t         s_held_mask= 0;        // bitmask currently held in guided mode
-static uint32_t         s_hold_end_nmi = 0;    // NMI at which to release held buttons
+static const SceneInfo* s_scene       = nullptr; // current scene entry, null = unknown
+static uint32_t         s_scene_start_frame = 0; // disc frame when scene seek fired
+static int              s_slot        = 0;        // next slot index to press
+static uint32_t         s_held_mask   = 0;        // bitmask currently held in guided mode
+static uint32_t         s_hold_end_nmi = 0;       // NMI at which to release held buttons
 
 // Stuck detection (simple mode)
 static uint32_t s_recent_to[STUCK_WINDOW];
@@ -269,12 +266,13 @@ static const SceneInfo* find_scene(uint32_t frame)
     return nullptr;
 }
 
-// Convert disc frame offset → NMI offset.
-// At 24 fps and NMI_HZ NMIs/s: NMI = frames * NMI_HZ / DISC_FPS
-static uint32_t frames_to_nmi(int32_t frames)
+// Compute the target disc frame for a slot.
+// scene_start + offset + delta, clamped to ≥ scene_start.
+static uint32_t slot_target_frame(uint32_t scene_start, int32_t offset, int32_t delta)
 {
-    if (frames <= 0) return 0;
-    return (uint32_t)((int64_t)frames * NMI_HZ / DISC_FPS);
+    int64_t t = (int64_t)scene_start + offset + delta;
+    if (t < (int64_t)scene_start) t = scene_start;
+    return (uint32_t)t;
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -306,13 +304,14 @@ bool init(char move_char, uint32_t delay_sec)
 
 bool init_guided(int32_t delta_frames)
 {
-    s_guided       = true;
-    s_delta_frames = delta_frames;
-    s_active       = true;
-    s_move_held    = false;
-    s_scene        = nullptr;
-    s_slot         = 0;
-    s_held_mask    = 0;
+    s_guided            = true;
+    s_delta_frames      = delta_frames;
+    s_active            = true;
+    s_move_held         = false;
+    s_scene             = nullptr;
+    s_scene_start_frame = 0;
+    s_slot              = 0;
+    s_held_mask         = 0;
     memset(s_recent_to, 0, sizeof(s_recent_to));
     fprintf(stderr, "[explorer] guided mode: delta=%+d frames  scenes=%d\n",
             delta_frames, SCENE_TABLE_COUNT);
@@ -369,19 +368,37 @@ void on_search(uint32_t from, uint32_t to)
     if (s_guided && s_state == PLAYING) {
         const SceneInfo* scene = find_scene(to);
         if (scene) {
-            s_scene           = scene;
-            s_scene_start_nmi = s_nmi;
-            s_slot            = 0;
-            s_held_mask       = 0;
+            s_scene             = scene;
+            s_scene_start_frame = to;
+            s_slot              = 0;
+            s_held_mask         = 0;
             fprintf(stderr, "[explorer] guided: scene frame=%u slots=%d  delta=%+d\n",
                     to, scene->slot_count, s_delta_frames);
             fflush(stderr);
+        } else if (s_scene) {
+            // Sub-seek within the current scene: disc jumped to `to`.
+            // Skip any slots whose target frame the disc has already passed.
+            while (s_slot < s_scene->slot_count) {
+                uint32_t target = slot_target_frame(s_scene_start_frame,
+                                                     s_scene->slots[s_slot].frame_offset,
+                                                     s_delta_frames);
+                if (to > target) {
+                    fprintf(stderr, "[explorer] guided: sub-seek %u->%u skips slot %d (target frame %u)\n",
+                            from, to, s_slot, target);
+                    fflush(stderr);
+                    s_slot++;
+                } else break;
+            }
+            if (s_slot >= s_scene->slot_count) {
+                fprintf(stderr, "[explorer] guided: all slots skipped after sub-seek, waiting for next scene\n");
+                fflush(stderr);
+                s_scene = nullptr;
+            }
         }
-        // Unknown frame: keep current scene context (mid-scene sub-seeks)
     }
 }
 
-Action tick()
+Action tick(uint32_t current_disc_frame)
 {
     if (!s_active) return NO_ACTION;
     s_nmi++;
@@ -450,10 +467,11 @@ Action tick()
                         s_move_char, s_simple_mask, s_delay_nmi, PULSE_PERIOD);
             }
             fflush(stderr);
-            s_prev_lives = 255;
-            s_scene      = nullptr;
-            s_slot       = 0;
-            s_held_mask  = 0;
+            s_prev_lives        = 255;
+            s_scene             = nullptr;
+            s_scene_start_frame = 0;
+            s_slot              = 0;
+            s_held_mask         = 0;
             memset(s_recent_to, 0, sizeof(s_recent_to));
             enter_state(PLAYING);
         }
@@ -490,17 +508,17 @@ Action tick()
 
             if (s_scene && s_slot < s_scene->slot_count && !s_held_mask) {
                 const SlotInfo& slot = s_scene->slots[s_slot];
-                // target NMI = scene_start + (frame_offset + delta) * NMI_HZ / DISC_FPS
-                int32_t  adj_frames = slot.frame_offset + s_delta_frames;
-                uint32_t target_nmi = s_scene_start_nmi + frames_to_nmi(adj_frames);
+                uint32_t target_frame = slot_target_frame(s_scene_start_frame,
+                                                           slot.frame_offset,
+                                                           s_delta_frames);
 
-                if (s_nmi >= target_nmi && slot.mask) {
+                if (current_disc_frame >= target_frame && slot.mask) {
                     action.press_mask = slot.mask;
                     s_held_mask       = slot.mask;
                     s_hold_end_nmi    = s_nmi + PULSE_PRESS;
-                    fprintf(stderr, "[explorer] guided: slot %d mask=0x%x @ nmi=%u"
-                            " (target=%u frame~%d+%d)\n",
-                            s_slot, slot.mask, s_nmi, target_nmi,
+                    fprintf(stderr, "[explorer] guided: slot %d mask=0x%x @ disc=%u"
+                            " (target=%u offset=%d+%d)\n",
+                            s_slot, slot.mask, current_disc_frame, target_frame,
                             slot.frame_offset, s_delta_frames);
                     fflush(stderr);
                 }
