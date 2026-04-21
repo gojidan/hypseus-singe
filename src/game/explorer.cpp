@@ -463,7 +463,7 @@ void on_search(uint32_t from, uint32_t to)
             else
                 snprintf(title, sizeof(title), "sc#%d: %u [%d slots]",
                          s_scene_count, to, scene->slot_count);
-            set_title_extra(title);
+            video::set_title_extra(title);
         } else if (s_scene && !s_held_mask) {
             // Sub-seek within the current scene: disc jumped to `to`.
             // Skip slots whose target frame the disc has already passed.
