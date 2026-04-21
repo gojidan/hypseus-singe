@@ -1260,6 +1260,22 @@ void set_game_window(const char* value)
      if (g_window) SDL_SetWindowTitle(g_window, g_window_title);
 }
 
+static char g_title_extra[256] = "";
+
+void set_title_extra(const char* extra)
+{
+    strncpy(g_title_extra, extra ? extra : "", sizeof(g_title_extra) - 1);
+    g_title_extra[sizeof(g_title_extra) - 1] = '\0';
+    if (!g_window) return;
+    if (g_title_extra[0]) {
+        char tmp[TITLE_LENGTH + 256];
+        snprintf(tmp, sizeof(tmp), "%s | %s", g_window_title, g_title_extra);
+        SDL_SetWindowTitle(g_window, tmp);
+    } else {
+        SDL_SetWindowTitle(g_window, g_window_title);
+    }
+}
+
 void set_rotate_degrees(float fDegrees)
 {
      g_fullscreen = true;

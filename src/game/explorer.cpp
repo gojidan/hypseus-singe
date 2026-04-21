@@ -1,5 +1,6 @@
 #include "explorer.h"
 #include "../io/input.h"
+#include "../video/video.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -248,6 +249,9 @@ static char     s_move_char   = 'N';
 static uint32_t s_delay_nmi   = 0;    // NMIs to wait after PLAYING before pulsing
 static bool     s_move_held   = false;
 
+// Scene counter (guided/scan mode display)
+static int      s_scene_count = 0;
+
 // Common
 static State    s_state       = ATTRACT;
 static uint32_t s_nmi         = 0;
@@ -441,6 +445,7 @@ void on_search(uint32_t from, uint32_t to)
             s_scene_start_frame = to;
             s_slot              = 0;
             s_held_mask         = 0;
+            s_scene_count++;
             // If seeking backward (from > to) the disc hasn't arrived yet —
             // current_disc_frame is still the old high value.  Suppress slot
             // firing until the disc physically arrives at the scene start.
@@ -449,6 +454,16 @@ void on_search(uint32_t from, uint32_t to)
                     to, scene->slot_count, s_delta_frames,
                     s_waiting_arrival ? " [await arrival]" : "");
             fflush(stderr);
+
+            // Update window title with current scene info
+            char title[128];
+            if (s_scan && to == s_scan_frame)
+                snprintf(title, sizeof(title), "sc#%d: %u [%d slots] SCAN d=%+d",
+                         s_scene_count, to, scene->slot_count, s_scan_delta);
+            else
+                snprintf(title, sizeof(title), "sc#%d: %u [%d slots]",
+                         s_scene_count, to, scene->slot_count);
+            set_title_extra(title);
         } else if (s_scene && !s_held_mask) {
             // Sub-seek within the current scene: disc jumped to `to`.
             // Skip slots whose target frame the disc has already passed.

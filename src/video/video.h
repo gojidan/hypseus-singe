@@ -183,6 +183,7 @@ void set_sboverlay_characterset(int value);
 void set_sboverlay_white(bool value);
 void set_window_title(char* value);
 void set_game_window(const char* value);
+void set_title_extra(const char* extra);  // explorer status in window title
 Uint16 get_video_width();
 Uint16 get_viewport_width();
 Uint16 get_viewport_height();
