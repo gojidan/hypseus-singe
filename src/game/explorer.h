@@ -53,6 +53,16 @@ bool init(char move_char, uint32_t delay_sec = 0);
 //  -N  → press N disc frames earlier (probe window start)
 bool init_guided(int32_t delta_frames = 0);
 
+// Scan mode: like guided, but for one specific slot in one scene the offset
+// and/or input is varied automatically across visits (via the death queue).
+// frame:       scene start disc frame (e.g. 22936)
+// slot:        1-based slot index to scan
+// input_char:  'L' 'R' 'U' 'D' 'B' or '0' to keep the SCENE_TABLE input
+// start_delta: delta relative to SCENE_TABLE offset for the first visit
+// step:        delta increment per visit (positive = scan upward, negative = downward)
+bool init_scan(uint32_t frame, int slot, char input_char,
+               int32_t start_delta, int32_t step);
+
 bool is_active();
 
 // Drive the state machine — call once from lair::do_nmi().

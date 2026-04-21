@@ -1021,10 +1021,19 @@ bool lair::handle_cmdline_arg(const char *arg)
 
     // -explorerR / -explorerL / -explorerU / -explorerD / -explorerB / -explorerN
     // Optional delay in seconds appended as integer: -explorerR5  (move=R, delay=5s)
-    // -explorerG / -marabelli   guided mode (correct move per scene, delta=0)
-    // -explorerG10              guided, +10 disc frames later  (probe window end)
-    // -explorerG-10             guided, -10 disc frames earlier (probe window start)
-    if (strncasecmp(arg, "-marabelli", 10) == 0) {
+    // -explorerG / -marabelli        guided mode (correct move per scene, delta=0)
+    // -marabelliscan frame,slot,input,start_delta,step   window scan mode
+    if (strncasecmp(arg, "-marabelliscan", 14) == 0) {
+        const char* p = arg + 14;
+        if (*p == ',') p++;
+        uint32_t frame = 0; int slot = 0; char inp = '0';
+        int32_t start_delta = 0, step = 1;
+        int n = sscanf(p, "%u,%d,%c,%d,%d", &frame, &slot, &inp, &start_delta, &step);
+        if (n >= 4)
+            bRes = explorer::init_scan(frame, slot, inp, start_delta, step);
+        else
+            fprintf(stderr, "[scan] usage: -marabelliscan frame,slot,input,start_delta[,step]\n");
+    } else if (strncasecmp(arg, "-marabelli", 10) == 0) {
         int32_t delta = arg[10] != '\0' ? (int32_t)atoi(arg + 10) : 0;
         bRes = explorer::init_guided(delta);
     } else if (strncasecmp(arg, "-explorerG", 10) == 0) {

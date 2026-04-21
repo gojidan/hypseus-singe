@@ -233,6 +233,15 @@ static bool     s_active      = false;
 static bool     s_guided      = false;
 static int32_t  s_delta_frames= 0;    // guided mode: signed frame offset per slot
 
+// Scan mode state
+static bool     s_scan        = false;
+static uint32_t s_scan_frame  = 0;    // scene to scan
+static int      s_scan_slot   = 0;    // 0-based slot index to replace
+static uint32_t s_scan_mask   = 0;    // input to test (0 = use SCENE_TABLE mask)
+static int32_t  s_scan_delta  = 0;    // current delta (varies each visit)
+static int32_t  s_scan_step   = 1;    // delta increment per visit
+static int      s_scan_visit  = 0;    // visit counter (for logging)
+
 // Simple mode
 static uint32_t s_simple_mask = 0;    // bitmask for simple pulse mode (MASK_*)
 static char     s_move_char   = 'N';
@@ -333,6 +342,38 @@ bool init_guided(int32_t delta_frames)
     return true;
 }
 
+bool init_scan(uint32_t frame, int slot, char input_char,
+               int32_t start_delta, int32_t step)
+{
+    if (!init_guided(0)) return false;
+
+    uint32_t mask = 0;
+    switch ((char)toupper((unsigned char)input_char)) {
+        case 'U': mask = MASK_U; break;
+        case 'L': mask = MASK_L; break;
+        case 'D': mask = MASK_D; break;
+        case 'R': mask = MASK_R; break;
+        case 'B': mask = MASK_B; break;
+        case '0': mask = 0;      break;  // keep SCENE_TABLE mask
+        default:
+            fprintf(stderr, "[scan] unknown input '%c'\n", input_char);
+            return false;
+    }
+
+    s_scan       = true;
+    s_scan_frame = frame;
+    s_scan_slot  = slot - 1;  // convert to 0-based
+    s_scan_mask  = mask;
+    s_scan_delta = start_delta;
+    s_scan_step  = step;
+    s_scan_visit = 0;
+
+    fprintf(stderr, "[scan] scene=%u slot=%d input='%c' start_delta=%+d step=%+d\n",
+            frame, slot, input_char, start_delta, step);
+    fflush(stderr);
+    return true;
+}
+
 bool is_active() { return s_active; }
 
 void on_lives(uint8_t n)
@@ -381,6 +422,19 @@ void on_search(uint32_t from, uint32_t to)
 
     // Guided mode: identify scene from table
     if (s_guided && s_state == PLAYING) {
+        // Scan mode: when the target scene is (re)visited, advance the delta.
+        if (s_scan && to == s_scan_frame) {
+            if (s_scan_visit > 0) s_scan_delta += s_scan_step;
+            s_scan_visit++;
+            const SceneInfo* sc = find_scene(to);
+            int32_t base_off = (sc && s_scan_slot < sc->slot_count)
+                               ? sc->slots[s_scan_slot].frame_offset : 0;
+            fprintf(stderr, "[scan] visit=%d slot=%d delta=%+d => offset=%d (disc ~%u)\n",
+                    s_scan_visit, s_scan_slot + 1, s_scan_delta,
+                    base_off + s_scan_delta, to + base_off + s_scan_delta);
+            fflush(stderr);
+        }
+
         const SceneInfo* scene = find_scene(to);
         if (scene) {
             s_scene             = scene;
@@ -543,18 +597,27 @@ Action tick(uint32_t current_disc_frame)
 
             if (s_scene && s_slot < s_scene->slot_count && !s_held_mask && !s_waiting_arrival) {
                 const SlotInfo& slot = s_scene->slots[s_slot];
+
+                // Scan mode: override offset delta and/or mask for the target slot.
+                bool is_scan_slot = s_scan
+                                    && s_scene->frame_start == s_scan_frame
+                                    && s_slot == s_scan_slot;
+                int32_t  eff_delta = is_scan_slot ? s_scan_delta : s_delta_frames;
+                uint32_t eff_mask  = (is_scan_slot && s_scan_mask) ? s_scan_mask : slot.mask;
+
                 uint32_t target_frame = slot_target_frame(s_scene_start_frame,
                                                            slot.frame_offset,
-                                                           s_delta_frames);
+                                                           eff_delta);
 
-                if (current_disc_frame >= target_frame && slot.mask) {
-                    action.press_mask = slot.mask;
-                    s_held_mask       = slot.mask;
+                if (current_disc_frame >= target_frame && eff_mask) {
+                    action.press_mask = eff_mask;
+                    s_held_mask       = eff_mask;
                     s_hold_end_nmi    = s_nmi + PULSE_PRESS;
-                    fprintf(stderr, "[explorer] guided: slot %d mask=0x%x @ disc=%u"
-                            " (target=%u offset=%d+%d)\n",
-                            s_slot, slot.mask, current_disc_frame, target_frame,
-                            slot.frame_offset, s_delta_frames);
+                    fprintf(stderr, "[explorer] %s: slot %d mask=0x%x @ disc=%u"
+                            " (target=%u offset=%d%+d)\n",
+                            is_scan_slot ? "SCAN" : "guided",
+                            s_slot, eff_mask, current_disc_frame, target_frame,
+                            slot.frame_offset, eff_delta);
                     fflush(stderr);
                 }
             }
