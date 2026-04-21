@@ -68,8 +68,7 @@ static const SceneInfo SCENE_TABLE[] = {
                  {MASK_U,  441}} },
 
     // Bubbling Cauldron / Acid Creature (bubbling_cauldron — tentacle_room row 7 col 3)
-    // Note: first two slots are a buzz B followed immediately by the correct U.
-    { 5123,  6, {{MASK_B,   58}, {MASK_U,   64}, {MASK_B, 116}, {MASK_D, 154},
+    { 5123,  5, {{MASK_U,   64}, {MASK_B, 116}, {MASK_D, 154},
                  {MASK_B,  183}, {MASK_R,  250}} },
 
     // Giddy Goons (giddy_goons — flattening_staircase alternate, row 8 col 2)
@@ -142,16 +141,16 @@ static const SceneInfo SCENE_TABLE[] = {
 
     // Pot of Gold (Lizard King)
     // U@488 confirmed in clean run. U@492 is backup for runs with shifted timer state.
-    { 17264,13, {{MASK_L,   43}, {MASK_R,  145}, {MASK_R, 234}, {MASK_R, 282},
+    { 17264,12, {{MASK_L,   43}, {MASK_R,  145}, {MASK_R, 234}, {MASK_R, 282},
                  {MASK_R,  398}, {MASK_R,  448}, {MASK_U, 488}, {MASK_U, 492},
-                 {MASK_B,  530}, {MASK_B,  540}, {MASK_B, 572}, {MASK_B, 596},
+                 {MASK_B,  540}, {MASK_B,  572}, {MASK_B, 596},
                  {MASK_B,  641}} },
 
     // Wizard's Kitchen (Drink Me)
     { 18282, 1, {{MASK_R,   32}} },
 
-    // Mausoleum (reversed) — 8 ROM windows (3 initial UP buzz slots then correct sequence)
-    { 18662, 8, {{MASK_U,   56}, {MASK_U,   68}, {MASK_U,  72}, {MASK_B, 101},
+    // Mausoleum (reversed)
+    { 18662, 7, {{MASK_U,   68}, {MASK_U,  72}, {MASK_B, 101},
                  {MASK_U,  137}, {MASK_B,  179}, {MASK_R, 218}, {MASK_B, 261}} },
 
     // Socker Boppers (reversed) / grim_reaper_reversed
@@ -173,9 +172,9 @@ static const SceneInfo SCENE_TABLE[] = {
 
     // Chapel Reversed (robot_knight_reversed — row 10 col 2)
     // 10 slots across noseek sequences; our log captured all from a cycle-2 visit.
-    { 21212,10, {{MASK_L,   92}, {MASK_R,  129}, {MASK_U, 167}, {MASK_R, 211},
-                 {MASK_L,  253}, {MASK_L,  263}, {MASK_R, 290}, {MASK_L, 315},
-                 {MASK_B,  365}, {MASK_B,  378}} },
+    { 21212, 8, {{MASK_L,   92}, {MASK_R,  129}, {MASK_U, 167}, {MASK_R, 211},
+                 {MASK_L,  263}, {MASK_R,  290}, {MASK_L, 315},
+                 {MASK_B,  378}} },
 
     // Elevator Floor (9-level, reversed)
     { 21959, 1, {{MASK_R,  155}} },
@@ -206,11 +205,10 @@ static const SceneInfo SCENE_TABLE[] = {
     { 26778, 3, {{MASK_U,   58}, {MASK_U,  102}, {MASK_L, 234}} },
 
     // Dragon's Lair (final)
-    { 28938,17, {{MASK_L,  108}, {MASK_L,  381}, {MASK_L, 574}, {MASK_L, 582},
-                 {MASK_D, 1124}, {MASK_R, 1219}, {MASK_U,1230}, {MASK_D,1301},
-                 {MASK_R, 1421}, {MASK_R, 1429}, {MASK_R,1437}, {MASK_U,1520},
-                 {MASK_B, 1556}, {MASK_B, 1644}, {MASK_L,1733}, {MASK_B,1772},
-                 {MASK_B, 1783}} },
+    { 28938,12, {{MASK_L,  108}, {MASK_L,  381}, {MASK_L, 574}, {MASK_L, 582},
+                 {MASK_D, 1124}, {MASK_D, 1301},
+                 {MASK_R, 1437}, {MASK_U, 1520},
+                 {MASK_B, 1556}, {MASK_B, 1644}, {MASK_L,1733}, {MASK_B,1783}} },
 };
 
 static const int SCENE_TABLE_COUNT = (int)(sizeof(SCENE_TABLE) / sizeof(SCENE_TABLE[0]));
