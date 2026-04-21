@@ -208,7 +208,7 @@ static const SceneInfo SCENE_TABLE[] = {
     { 28938,12, {{MASK_L,  108}, {MASK_L,  381}, {MASK_L, 574}, {MASK_L, 582},
                  {MASK_D, 1124}, {MASK_D, 1301},
                  {MASK_R, 1437}, {MASK_U, 1520},
-                 {MASK_B, 1556}, {MASK_B, 1644}, {MASK_L,1733}, {MASK_B,1783}} },
+                 {MASK_B, 1556}, {MASK_B, 1644}, {MASK_L,1733}, {MASK_B,1795}} },
 };
 
 static const int SCENE_TABLE_COUNT = (int)(sizeof(SCENE_TABLE) / sizeof(SCENE_TABLE[0]));
