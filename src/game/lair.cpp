@@ -1021,10 +1021,13 @@ bool lair::handle_cmdline_arg(const char *arg)
 
     // -explorerR / -explorerL / -explorerU / -explorerD / -explorerB / -explorerN
     // Optional delay in seconds appended as integer: -explorerR5  (move=R, delay=5s)
-    // -explorerG          guided mode (correct move per scene, delta=0)
-    // -explorerG10        guided, +10 disc frames later  (probe window end)
-    // -explorerG-10       guided, -10 disc frames earlier (probe window start)
-    if (strncasecmp(arg, "-explorerG", 10) == 0) {
+    // -explorerG / -marabelli   guided mode (correct move per scene, delta=0)
+    // -explorerG10              guided, +10 disc frames later  (probe window end)
+    // -explorerG-10             guided, -10 disc frames earlier (probe window start)
+    if (strncasecmp(arg, "-marabelli", 10) == 0) {
+        int32_t delta = arg[10] != '\0' ? (int32_t)atoi(arg + 10) : 0;
+        bRes = explorer::init_guided(delta);
+    } else if (strncasecmp(arg, "-explorerG", 10) == 0) {
         int32_t delta = arg[10] != '\0' ? (int32_t)atoi(arg + 10) : 0;
         bRes = explorer::init_guided(delta);
     } else if (strncasecmp(arg, "-explorer", 9) == 0 && arg[9] != '\0') {
