@@ -620,7 +620,13 @@ Action tick(uint32_t current_disc_frame)
                 bool is_scan_slot = s_scan
                                     && s_scene->frame_start == s_scan_frame
                                     && s_slot == s_scan_slot;
-                int32_t  eff_delta = is_scan_slot ? s_scan_delta : s_delta_frames;
+                // Global-shift exemption: Elevator end-of-cycle (21959) and DL Final (28938)
+                // are NOT added to the death queue — failing them locks Dirk in an infinite
+                // respawn loop.  Keep these scenes at their original offset regardless of shift.
+                bool shift_exempt = (s_scene_start_frame == 21959u ||
+                                     s_scene_start_frame == 28938u);
+                int32_t  eff_delta = is_scan_slot ? s_scan_delta
+                                   : (shift_exempt ? 0 : s_delta_frames);
                 uint32_t eff_mask  = (is_scan_slot && s_scan_mask) ? s_scan_mask : slot.mask;
 
                 uint32_t target_frame = slot_target_frame(s_scene_start_frame,
