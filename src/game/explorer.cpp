@@ -44,172 +44,174 @@ struct SlotInfo {
 };
 
 struct SceneInfo {
-    uint32_t frame_start;
-    int      slot_count;
-    SlotInfo slots[20];
+    uint32_t    frame_start;
+    int         slot_count;
+    SlotInfo    slots[20];
+    const char* name;          // short display name for title bar (optional, may be nullptr)
 };
 
 static const SceneInfo SCENE_TABLE[] = {
     // Vestibule (small crumbling room)
-    { 1887,  2, {{MASK_R,   63}, {MASK_R,  100}} },
+    { 1887,  2, {{MASK_R,   63}, {MASK_R,  100}}, "Vestibule" },
 
     // Tentacles & Halberd
     { 2353,  6, {{MASK_B,   71}, {MASK_U,  136}, {MASK_R, 181},
-                 {MASK_D,  225}, {MASK_L,  291}, {MASK_U, 342}} },
+                 {MASK_D,  225}, {MASK_L,  291}, {MASK_U, 342}}, "Tentacles" },
 
     // Snake Room (snake_room — tentacle_room alternate, row 7 col 2)
-    { 3097,  4, {{MASK_B,   53}, {MASK_B,   98}, {MASK_B, 137}, {MASK_U, 159}} },
+    { 3097,  4, {{MASK_B,   53}, {MASK_B,   98}, {MASK_B, 137}, {MASK_U, 159}}, "Snake Room" },
 
     // Fire Pit (ropes)
-    { 3561,  4, {{MASK_R,  108}, {MASK_R,  152}, {MASK_R, 197}, {MASK_R, 242}} },
+    { 3561,  4, {{MASK_R,  108}, {MASK_R,  152}, {MASK_R, 197}, {MASK_R, 242}}, "Fire Pit" },
 
     // Yellow Brick Road
     { 4139,  9, {{MASK_L,   36}, {MASK_U,   86}, {MASK_R, 142}, {MASK_U, 183},
                  {MASK_L,  236}, {MASK_U,  283}, {MASK_B, 363}, {MASK_R, 400},
-                 {MASK_U,  441}} },
+                 {MASK_U,  441}}, "Yellow Brick Road" },
 
     // Bubbling Cauldron / Acid Creature (bubbling_cauldron — tentacle_room row 7 col 3)
     { 5123,  5, {{MASK_U,   64}, {MASK_B, 116}, {MASK_D, 154},
-                 {MASK_B,  183}, {MASK_R,  250}} },
+                 {MASK_B,  183}, {MASK_R,  250}}, "Bubbling Cauldron" },
 
     // Giddy Goons (giddy_goons — flattening_staircase alternate, row 8 col 2)
     // Verified: human run 20260420. Buzz R@100 dropped (not needed to pass scene).
-    { 5683,  4, {{MASK_B,   66}, {MASK_R,  111}, {MASK_B, 163}, {MASK_U, 201}} },
+    { 5683,  4, {{MASK_B,   66}, {MASK_R,  111}, {MASK_B, 163}, {MASK_U, 201}}, "Giddy Goons" },
 
     // YMCA Room (flattening stairs)
-    { 6375,  4, {{MASK_L,   49}, {MASK_B,  110}, {MASK_L, 143}, {MASK_L, 210}} },
+    { 6375,  4, {{MASK_L,   49}, {MASK_B,  110}, {MASK_L, 143}, {MASK_L, 210}}, "YMCA Room" },
 
     // Forge (Smithee — smithee, row 6 col 1)
     // Verified: human run 20260420. Slot 5 B@374: bot fired at 368 (pre-window), missed.
     { 6994,  5, {{MASK_B,   65}, {MASK_B,  129}, {MASK_L, 175},
-                 {MASK_B,  235}, {MASK_B,  374}} },
+                 {MASK_B,  235}, {MASK_B,  374}}, "Forge" },
 
     // Socker Boppers (grim_reaper — row 5 col 3)
     // Verified: human run 20260420. B@221 buzzed (edge of window); B@230 is safe.
-    { 8004,  4, {{MASK_U,   77}, {MASK_B,  230}, {MASK_D, 281}, {MASK_U, 350}} },
+    { 8004,  4, {{MASK_U,   77}, {MASK_B,  230}, {MASK_D, 281}, {MASK_U, 350}}, "Socker Boppers" },
 
     // Breathing Door (wind room)
-    { 8709,  1, {{MASK_R,  180}} },
+    { 8709,  1, {{MASK_R,  190}}, "Breathing Door" },
 
     // Bower (bedroom / closing wall)
-    { 9181,  1, {{MASK_U,   14}} },
+    { 9181,  1, {{MASK_U,   14}}, "Bower" },
 
     // Fire Room (lightning / bench over exit)
-    { 9529,  4, {{MASK_R,   78}, {MASK_L,  117}, {MASK_D, 165}, {MASK_L, 213}} },
+    { 9529,  4, {{MASK_R,   78}, {MASK_L,  117}, {MASK_D, 165}, {MASK_L, 213}}, "Fire Room" },
 
     // Flying Barding
     { 10021, 6, {{MASK_R,   96}, {MASK_L,  132}, {MASK_R, 176}, {MASK_L, 223},
-                 {MASK_L,  271}, {MASK_L,  306}} },
+                 {MASK_L,  271}, {MASK_L,  306}}, "Flying Barding" },
 
     // Chapel (Robot Knight / checkered floor)
     { 10741, 8, {{MASK_R,   89}, {MASK_L,  123}, {MASK_U, 163}, {MASK_L, 213},
-                 {MASK_R,  259}, {MASK_L,  288}, {MASK_R, 314}, {MASK_B, 371}} },
+                 {MASK_R,  259}, {MASK_L,  288}, {MASK_R, 314}, {MASK_B, 371}}, "Chapel" },
 
     // Mausoleum (Crypt Creeps)
     { 11489, 6, {{MASK_U,   61}, {MASK_B,  103}, {MASK_U, 139},
-                 {MASK_B,  181}, {MASK_L,  226}, {MASK_B, 262}} },
+                 {MASK_B,  181}, {MASK_L,  226}, {MASK_B, 262}}, "Mausoleum" },
 
     // Catwalk Bats (catwalk_bats — yellow_brick_road row 9 col 3)
     { 12190, 5, {{MASK_U,   47}, {MASK_U,   87}, {MASK_B, 140},
-                 {MASK_R,  177}, {MASK_R,  211}} },
+                 {MASK_R,  177}, {MASK_R,  211}}, "Catwalk Bats" },
 
     // Fire Pit (reversed)
     // Slot 1 accept at disc 12835. Seq3 noseek window 27-44f from ~12837 = 12864-12881 (midpoint 12872 = +147).
     // Slots 3-4 recalculated from seq4/seq5 noseek starts; previous 156/203/248 were at window boundaries.
-    { 12725, 4, {{MASK_L,  110}, {MASK_L,  158}, {MASK_L, 203}, {MASK_L, 248}} },
+    { 12725, 4, {{MASK_L,  110}, {MASK_L,  158}, {MASK_L, 203}, {MASK_L, 248}}, "Fire Pit Rev" },
 
     // Yellow Brick Road (reversed)
     { 13303, 9, {{MASK_R,   41}, {MASK_U,   89}, {MASK_L, 141}, {MASK_U, 185},
                  {MASK_R,  234}, {MASK_U,  284}, {MASK_B, 368}, {MASK_L, 406},
-                 {MASK_U,  449}} },
+                 {MASK_U,  449}}, "Yellow Brick Rev" },
 
     // Giant Bat
-    { 14327, 4, {{MASK_B,   17}, {MASK_L,   46}, {MASK_U, 104}, {MASK_B, 163}} },
+    { 14327, 4, {{MASK_B,   17}, {MASK_L,   46}, {MASK_U, 104}, {MASK_B, 163}}, "Giant Bat" },
 
     // Elevator Floor (falling_platform_short / falling_platform_long start)
     // 3-floor version: no window at floors 1-2, window opens at floor 3 (offset 360).
     // 9-floor version: window opens at floor 1 (offset ~154). Slot 1 fires but misses for
     // 3-floor (no enable); slot 2 catches the floor-3 window in both cases.
-    { 14847, 2, {{MASK_L,  156}, {MASK_L,  360}} },
+    { 14847, 2, {{MASK_L,  156}, {MASK_L,  360}}, "Elevator" },
 
     // Forge Reversed (smithee_reversed — smithee row 6 col 2)
     { 15653, 5, {{MASK_B,   62}, {MASK_B,  131}, {MASK_R, 172},
-                 {MASK_B,  242}, {MASK_B,  376}} },
+                 {MASK_B,  242}, {MASK_B,  376}}, "Forge Rev" },
 
     // Flying Barding (reversed)
     { 16544, 6, {{MASK_L,   95}, {MASK_R,  132}, {MASK_L, 173}, {MASK_R, 222},
-                 {MASK_R,  268}, {MASK_R,  303}} },
+                 {MASK_R,  268}, {MASK_R,  303}}, "Flying Barding Rev" },
 
     // Pot of Gold (Lizard King)
     // U@488 confirmed in clean run. U@492 is backup for runs with shifted timer state.
     { 17264,12, {{MASK_L,   43}, {MASK_R,  145}, {MASK_R, 234}, {MASK_R, 282},
                  {MASK_R,  398}, {MASK_R,  448}, {MASK_U, 488}, {MASK_U, 492},
                  {MASK_B,  540}, {MASK_B,  572}, {MASK_B, 596},
-                 {MASK_B,  641}} },
+                 {MASK_B,  641}}, "Pot of Gold" },
 
     // Wizard's Kitchen (Drink Me)
-    { 18282, 1, {{MASK_R,   32}} },
+    { 18282, 1, {{MASK_R,   32}}, "Wizard Kitchen" },
 
     // Mausoleum (reversed)
     { 18662, 7, {{MASK_U,   68}, {MASK_U,  72}, {MASK_B, 101},
-                 {MASK_U,  137}, {MASK_B,  179}, {MASK_R, 218}, {MASK_B, 261}} },
+                 {MASK_U,  137}, {MASK_B,  179}, {MASK_R, 218}, {MASK_B, 261}}, "Mausoleum Rev" },
 
     // Socker Boppers (reversed) / grim_reaper_reversed
     // After U@90: ROM seeks 19614→19628. Seq3@19628 B window is 73-86f (disc 19701-19714).
     // Old B@174 fired at disc 19694 = offset 66 from 19628 → pre-window → buzz.
     // Fixed: B@187 = disc 19707 = offset 79 from 19628, safely inside window 73-86.
-    { 19520, 4, {{MASK_U,   90}, {MASK_B,  187}, {MASK_D, 251}, {MASK_U, 307}} },
+    { 19520, 4, {{MASK_U,   90}, {MASK_B,  187}, {MASK_D, 251}, {MASK_U, 307}}, "Socker Boppers Rev" },
 
     // Note: smithee_reversed (Forge reversed, frame 15653) is already in the table above.
     // 19628 is a Socker Boppers rev sub-seek target — no entry here prevents false scene-switch.
 
     // Tilting Room (tilting_room — row 11 col 2)
     // Verified: human run 20260420. Visit 1: D@97+U@128 → death (missed L). Visit 2: D@95+U@130+L@164 → success.
-    { 20187, 3, {{MASK_D,   95}, {MASK_U,  130}, {MASK_L,  164}} },
+    { 20187, 3, {{MASK_D,   95}, {MASK_U,  130}, {MASK_L,  164}}, "Tilting Room" },
 
     // Throne Room (throne_room — row 11 col 1)
     // Levels.json move "U,R" is split into two ROM windows: U@78 then R@87.
-    { 20674, 4, {{MASK_R,   52}, {MASK_U,   78}, {MASK_R,  87}, {MASK_R, 199}} },
+    { 20674, 4, {{MASK_R,   52}, {MASK_U,   78}, {MASK_R,  87}, {MASK_R, 199}}, "Throne Room" },
 
     // Chapel Reversed (robot_knight_reversed — row 10 col 2)
     // 10 slots across noseek sequences; our log captured all from a cycle-2 visit.
     { 21212, 8, {{MASK_L,   92}, {MASK_R,  129}, {MASK_U, 167}, {MASK_R, 211},
                  {MASK_L,  263}, {MASK_R,  290}, {MASK_L, 315},
-                 {MASK_B,  378}} },
+                 {MASK_B,  378}}, "Chapel Rev" },
 
     // Elevator Floor (9-level, reversed)
-    { 21959, 1, {{MASK_R,  155}} },
+    { 21959, 1, {{MASK_R,  155}}, "Elevator Rev" },
 
     // Pirates of the Caribbean
     { 22936,13, {{MASK_L,   16}, {MASK_R,   60}, {MASK_L, 109}, {MASK_R, 155},
                  {MASK_U,  284}, {MASK_U,  344}, {MASK_U, 405}, {MASK_U, 471},
                  {MASK_R,  596}, {MASK_L,  671}, {MASK_R, 735}, {MASK_L, 797},
-                 {MASK_R,  913}} },
+                 {MASK_R,  913}}, "Pirates" },
 
     // Mudmen
     // Slot 7 U@442 fired at disc 24820 = ~60f into seq8, but landed in death zone boundary.
     // seq8 UP success window is 46-63f from start (~24762); fixed to U@436 = disc 24814 = ~52f.
+    // ROM-verified 20260423: slot 7 window disc 24809-24837 (W=28), center offset 445.
     { 24378, 9, {{MASK_B,  128}, {MASK_U,  217}, {MASK_U, 245}, {MASK_U, 302},
-                 {MASK_U,  335}, {MASK_U,  382}, {MASK_U, 442}, {MASK_U, 500},
-                 {MASK_U,  620}} },
+                 {MASK_U,  335}, {MASK_U,  382}, {MASK_U, 445}, {MASK_U, 500},
+                 {MASK_U,  620}}, "Mudmen" },
 
     // Knight & Light (Black Knight / horse)
     // 3-slot data from cycle 3 visit; cycles 1-2 only have 2 slots but the
     // extra press on an already-ended scene is harmless.
-    { 25536, 3, {{MASK_L,   77}, {MASK_L,  176}, {MASK_R, 247}} },
+    { 25536, 3, {{MASK_L,   77}, {MASK_L,  176}, {MASK_R, 247}}, "Knight & Light" },
 
     // Boulder Trench (colored balls)
     { 26098, 7, {{MASK_D,  128}, {MASK_D,  174}, {MASK_D, 223}, {MASK_D, 271},
-                 {MASK_D,  322}, {MASK_D,  366}, {MASK_U, 411}} },
+                 {MASK_D,  322}, {MASK_D,  366}, {MASK_U, 411}}, "Boulder Trench" },
 
     // Three Caves (jagged door / geyser)
-    { 26778, 3, {{MASK_U,   58}, {MASK_U,  102}, {MASK_L, 234}} },
+    { 26778, 3, {{MASK_U,   58}, {MASK_U,  102}, {MASK_L, 234}}, "Three Caves" },
 
     // Dragon's Lair (final)
     { 28938,12, {{MASK_L,  108}, {MASK_L,  381}, {MASK_L, 574}, {MASK_L, 582},
                  {MASK_D, 1124}, {MASK_D, 1301},
                  {MASK_R, 1437}, {MASK_U, 1520},
-                 {MASK_B, 1556}, {MASK_B, 1644}, {MASK_L,1733}, {MASK_B,1795}} },
+                 {MASK_B, 1556}, {MASK_B, 1644}, {MASK_L,1733}, {MASK_B,1795}}, "Dragon's Lair" },
 };
 
 static const int SCENE_TABLE_COUNT = (int)(sizeof(SCENE_TABLE) / sizeof(SCENE_TABLE[0]));
@@ -456,13 +458,14 @@ void on_search(uint32_t from, uint32_t to)
             fflush(stderr);
 
             // Update window title with current scene info
-            char title[128];
+            char title[160];
+            const char* name = scene->name ? scene->name : "?";
             if (s_scan && to == s_scan_frame)
-                snprintf(title, sizeof(title), "sc#%d: %u [%d slots] SCAN d=%+d",
-                         s_scene_count, to, scene->slot_count, s_scan_delta);
+                snprintf(title, sizeof(title), "sc#%d %s (%u) [%d] SCAN d=%+d",
+                         s_scene_count, name, to, scene->slot_count, s_scan_delta);
             else
-                snprintf(title, sizeof(title), "sc#%d: %u [%d slots]",
-                         s_scene_count, to, scene->slot_count);
+                snprintf(title, sizeof(title), "sc#%d %s (%u) [%d]",
+                         s_scene_count, name, to, scene->slot_count);
             video::set_title_extra(title);
         } else if (s_scene && !s_held_mask) {
             // Sub-seek within the current scene: disc jumped to `to`.
