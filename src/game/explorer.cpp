@@ -254,6 +254,13 @@ static bool     s_move_held   = false;
 // Scene counter (guided/scan mode display)
 static int      s_scene_count = 0;
 
+// Global-shift mode: track which scenes have been visited at least once.
+// Shift is applied ONLY to the first visit of each scene; subsequent visits
+// (death-queue retries, later cycles) use the original offset so the game
+// can progress past slots whose shifted offset falls outside the ROM window.
+static bool     s_scene_visited[128] = {false}; // indexed by scene_table_idx
+static bool     s_current_first_visit = false;
+
 // Common
 static State    s_state       = ATTRACT;
 static uint32_t s_nmi         = 0;
@@ -448,6 +455,14 @@ void on_search(uint32_t from, uint32_t to)
             s_slot              = 0;
             s_held_mask         = 0;
             s_scene_count++;
+            // Track first visit for global-shift mode
+            int scene_idx = (int)(scene - SCENE_TABLE);
+            if (scene_idx >= 0 && scene_idx < (int)(sizeof(s_scene_visited)/sizeof(s_scene_visited[0]))) {
+                s_current_first_visit = !s_scene_visited[scene_idx];
+                s_scene_visited[scene_idx] = true;
+            } else {
+                s_current_first_visit = true;
+            }
             // If seeking backward (from > to) the disc hasn't arrived yet —
             // current_disc_frame is still the old high value.  Suppress slot
             // firing until the disc physically arrives at the scene start.
@@ -568,6 +583,9 @@ Action tick(uint32_t current_disc_frame)
             s_held_mask         = 0;
             s_waiting_arrival   = false;
             memset(s_recent_to, 0, sizeof(s_recent_to));
+            // Reset first-visit tracking for global-shift mode
+            memset(s_scene_visited, 0, sizeof(s_scene_visited));
+            s_current_first_visit = true;
             enter_state(PLAYING);
         }
         break;
@@ -625,8 +643,12 @@ Action tick(uint32_t current_disc_frame)
                 // respawn loop.  Keep these scenes at their original offset regardless of shift.
                 bool shift_exempt = (s_scene_start_frame == 21959u ||
                                      s_scene_start_frame == 28938u);
+                // Apply global shift ONLY to the first visit of each scene.  Retries from
+                // the death queue (and subsequent cycle visits) use offset 0 so the game
+                // can progress past slots whose shifted offset falls outside the ROM window.
+                bool apply_shift = !shift_exempt && s_current_first_visit;
                 int32_t  eff_delta = is_scan_slot ? s_scan_delta
-                                   : (shift_exempt ? 0 : s_delta_frames);
+                                   : (apply_shift ? s_delta_frames : 0);
                 uint32_t eff_mask  = (is_scan_slot && s_scan_mask) ? s_scan_mask : slot.mask;
 
                 uint32_t target_frame = slot_target_frame(s_scene_start_frame,
