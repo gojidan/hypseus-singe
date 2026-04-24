@@ -1033,6 +1033,23 @@ bool lair::handle_cmdline_arg(const char *arg)
             bRes = explorer::init_scan(frame, slot, inp, start_delta, step);
         else
             fprintf(stderr, "[scan] usage: -marabelliscan frame,slot,input,start_delta[,step]\n");
+    } else if (strncasecmp(arg, "-marabellimask", 14) == 0) {
+        // Usage: -marabellimask,FRAME:SLOT,FRAME:SLOT,...
+        // Forces listed slots to use their original offset during -marabelli<N> runs.
+        const char* p = arg + 14;
+        if (*p == ',') p++;
+        bRes = true;
+        while (*p) {
+            uint32_t frame = 0; int slot = 0;
+            int n = sscanf(p, "%u:%d", &frame, &slot);
+            if (n == 2 && frame > 0 && slot > 0) {
+                explorer::add_shift_mask(frame, slot);
+            } else {
+                fprintf(stderr, "[mask] skipped invalid item near '%s'\n", p);
+            }
+            while (*p && *p != ',') p++;
+            if (*p == ',') p++;
+        }
     } else if (strncasecmp(arg, "-marabelli", 10) == 0) {
         int32_t delta = arg[10] != '\0' ? (int32_t)atoi(arg + 10) : 0;
         bRes = explorer::init_guided(delta);

@@ -63,6 +63,12 @@ bool init_guided(int32_t delta_frames = 0);
 bool init_scan(uint32_t frame, int slot, char input_char,
                int32_t start_delta, int32_t step);
 
+// Global-shift mask: add a scene:slot entry to the "forced to original offset"
+// list.  During -marabelli<N> runs, masked slots ignore the shift and use their
+// SCENE_TABLE offset.  Used to unblock scan of later slots after earlier ones
+// are already characterised.  frame=scene_start (e.g. 2353), slot_1based=1..N
+bool add_shift_mask(uint32_t frame, int slot_1based);
+
 bool is_active();
 
 // Drive the state machine — call once from lair::do_nmi().

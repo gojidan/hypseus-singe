@@ -261,6 +261,14 @@ static int      s_scene_count = 0;
 static bool     s_scene_visited[128] = {false}; // indexed by scene_table_idx
 static bool     s_current_first_visit = false;
 
+// Global-shift mask: list of (scene_frame, slot_idx_0based) pairs that force
+// the original offset (delta=0) during -marabelli<N> runs.  Used to bypass
+// already-characterised slots so later slots can be tested at extreme shifts.
+#define EXPLORER_MASK_MAX 64
+static uint32_t s_mask_frame[EXPLORER_MASK_MAX];
+static int      s_mask_slot[EXPLORER_MASK_MAX];
+static int      s_mask_count = 0;
+
 // Common
 static State    s_state       = ATTRACT;
 static uint32_t s_nmi         = 0;
@@ -353,6 +361,32 @@ bool init_guided(int32_t delta_frames)
             delta_frames, SCENE_TABLE_COUNT);
     fflush(stderr);
     return true;
+}
+
+bool add_shift_mask(uint32_t frame, int slot_1based)
+{
+    if (s_mask_count >= EXPLORER_MASK_MAX) {
+        fprintf(stderr, "[mask] full (max %d entries), dropping %u:%d\n",
+                EXPLORER_MASK_MAX, frame, slot_1based);
+        fflush(stderr);
+        return false;
+    }
+    s_mask_frame[s_mask_count] = frame;
+    s_mask_slot[s_mask_count]  = slot_1based - 1;  // 0-based
+    s_mask_count++;
+    fprintf(stderr, "[mask] added frame=%u slot=%d (count=%d)\n",
+            frame, slot_1based, s_mask_count);
+    fflush(stderr);
+    return true;
+}
+
+static bool is_shift_masked(uint32_t scene_frame, int slot_idx_0based)
+{
+    for (int i = 0; i < s_mask_count; i++) {
+        if (s_mask_frame[i] == scene_frame && s_mask_slot[i] == slot_idx_0based)
+            return true;
+    }
+    return false;
 }
 
 bool init_scan(uint32_t frame, int slot, char input_char,
@@ -646,7 +680,9 @@ Action tick(uint32_t current_disc_frame)
                 // Apply global shift ONLY to the first visit of each scene.  Retries from
                 // the death queue (and subsequent cycle visits) use offset 0 so the game
                 // can progress past slots whose shifted offset falls outside the ROM window.
-                bool apply_shift = !shift_exempt && s_current_first_visit;
+                // Also skip shift for slots in the explicit mask list.
+                bool slot_masked = is_shift_masked(s_scene_start_frame, s_slot);
+                bool apply_shift = !shift_exempt && !slot_masked && s_current_first_visit;
                 int32_t  eff_delta = is_scan_slot ? s_scan_delta
                                    : (apply_shift ? s_delta_frames : 0);
                 uint32_t eff_mask  = (is_scan_slot && s_scan_mask) ? s_scan_mask : slot.mask;
