@@ -264,8 +264,8 @@ static const SceneInfo SCENE_TABLE_HARD[] = {
     { 12190, 5, {{MASK_U,   59}, {MASK_U,   89}, {MASK_B, 143},
                  {MASK_R,  177}, {MASK_R,  213}}, "Catwalk Bats" },
     { 12725, 4, {{MASK_L,  107}, {MASK_L,  164}, {MASK_L, 209}, {MASK_L, 244}}, "Fire Pit Rev" },
-    // YBR Rev Hard: slot 1 walkthrough was R, but human played L 5/7 times (multi-input)
-    { 13303, 9, {{MASK_L,   50}, {MASK_U,   87}, {MASK_L, 137}, {MASK_U, 178},
+    // YBR Rev Hard: slot 1 reverted to R (walkthrough) after user testing
+    { 13303, 9, {{MASK_R,   50}, {MASK_U,   87}, {MASK_L, 137}, {MASK_U, 178},
                  {MASK_R,  230}, {MASK_U,  285}, {MASK_B, 364}, {MASK_L, 403},
                  {MASK_U,  447}}, "Yellow Brick Rev" },
     { 14327, 5, {{MASK_B,   10}, {MASK_L,   48}, {MASK_U, 104}, {MASK_B, 163},
