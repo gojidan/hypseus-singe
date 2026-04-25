@@ -267,7 +267,7 @@ static const SceneInfo SCENE_TABLE_HARD[] = {
                  {MASK_R,  230}, {MASK_U,  285}, {MASK_B, 364}, {MASK_L, 403},
                  {MASK_U,  447}}, "Yellow Brick Rev" },
     { 14327, 5, {{MASK_B,   10}, {MASK_L,   48}, {MASK_U, 104}, {MASK_B, 163},
-                 {MASK_B,  195}}, "Giant Bat" },  // slot 5 NEW on Hard
+                 {MASK_L,  195}}, "Giant Bat" },  // slot 5 NEW on Hard
     { 14847, 1, {{MASK_L,  139}}, "Elevator" },
     { 15653, 5, {{MASK_B,   63}, {MASK_B,  132}, {MASK_R, 179},
                  {MASK_B,  242}, {MASK_B,  375}}, "Forge Rev" },
@@ -291,7 +291,7 @@ static const SceneInfo SCENE_TABLE_HARD[] = {
     //   s9 R@676 (disc 23612), s10 L@734 (disc 23670), s11 R@797 (disc 23733), s12 L@913 (disc 23849)
     { 22936,12, {{MASK_L,   13}, {MASK_R,   59}, {MASK_L, 108}, {MASK_R, 154},
                  {MASK_U,  282}, {MASK_U,  341}, {MASK_U, 401}, {MASK_U, 469},
-                 {MASK_R,  676}, {MASK_L,  734}, {MASK_R, 797}, {MASK_L, 913}}, "Pirates" },
+                 {MASK_L,  676}, {MASK_R,  734}, {MASK_L, 797}, {MASK_R, 913}}, "Pirates" },
     // Mudmen: 10 slots (slot 10 NEW on Hard, X→U)
     { 24378,10, {{MASK_B,  110}, {MASK_U,  217}, {MASK_U, 251}, {MASK_U, 305},
                  {MASK_U,  343}, {MASK_U,  385}, {MASK_U, 445}, {MASK_U, 506},
@@ -299,7 +299,7 @@ static const SceneInfo SCENE_TABLE_HARD[] = {
     // Knight & Light: 4 slots (slot 1 NEW on Hard, very early L)
     // Note: human samples for slot 1 were disc 5, 9, 11 (median 9). Bot at offset 9
     // buzzed (window starts later). Moving to 12 puts bot solidly inside window.
-    { 25536, 4, {{MASK_L,   12}, {MASK_L,   69}, {MASK_R, 172}, {MASK_R, 248}}, "Knight & Light" },
+    { 25536, 4, {{MASK_U,   12}, {MASK_L,   69}, {MASK_L, 172}, {MASK_R, 248}}, "Knight & Light" },
     { 26098, 7, {{MASK_D,  127}, {MASK_D,  173}, {MASK_D, 222}, {MASK_D, 269},
                  {MASK_D,  318}, {MASK_D,  364}, {MASK_U, 409}}, "Boulder Trench" },
     { 26778, 3, {{MASK_U,   66}, {MASK_U,  106}, {MASK_L, 233}}, "Three Caves" },
