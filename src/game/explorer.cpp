@@ -285,9 +285,13 @@ static const SceneInfo SCENE_TABLE_HARD[] = {
     { 21212, 8, {{MASK_L,   91}, {MASK_R,  126}, {MASK_U, 168}, {MASK_R, 214},
                  {MASK_L,  261}, {MASK_R,  292}, {MASK_L, 317}, {MASK_B, 369}}, "Chapel Rev" },
     { 21959, 1, {{MASK_R,  158}}, "Elevator Rev" },
+    // Pirates Hard: ROM sub-seeks 22936→23601 between slot 8 and 9. Slots 9-12 are
+    // anchored to 22936 in our table but their actual disc frames come AFTER the
+    // sub-seek. ROM-verified offsets from 6 human-played Hard runs:
+    //   s9 R@676 (disc 23612), s10 L@734 (disc 23670), s11 R@797 (disc 23733), s12 L@913 (disc 23849)
     { 22936,12, {{MASK_L,   13}, {MASK_R,   59}, {MASK_L, 108}, {MASK_R, 154},
                  {MASK_U,  282}, {MASK_U,  341}, {MASK_U, 401}, {MASK_U, 469},
-                 {MASK_R,  596}, {MASK_L,  671}, {MASK_R, 735}, {MASK_L, 797}}, "Pirates" },
+                 {MASK_R,  676}, {MASK_L,  734}, {MASK_R, 797}, {MASK_L, 913}}, "Pirates" },
     // Mudmen: 10 slots (slot 10 NEW on Hard, X→U)
     { 24378,10, {{MASK_B,  110}, {MASK_U,  217}, {MASK_U, 251}, {MASK_U, 305},
                  {MASK_U,  343}, {MASK_U,  385}, {MASK_U, 445}, {MASK_U, 506},
