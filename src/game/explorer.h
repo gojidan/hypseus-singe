@@ -53,6 +53,10 @@ bool init(char move_char, uint32_t delay_sec = 0);
 //  -N  → press N disc frames earlier (probe window start)
 bool init_guided(int32_t delta_frames = 0);
 
+// Hard difficulty guided mode: uses SCENE_TABLE_HARD (different offsets, more
+// slots in some scenes, alias frames for start_dead recognition).
+bool init_guided_hard(int32_t delta_frames = 0);
+
 // Scan mode: like guided, but for one specific slot in one scene the offset
 // and/or input is varied automatically across visits (via the death queue).
 // frame:       scene start disc frame (e.g. 22936)

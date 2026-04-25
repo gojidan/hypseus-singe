@@ -1033,6 +1033,10 @@ bool lair::handle_cmdline_arg(const char *arg)
             bRes = explorer::init_scan(frame, slot, inp, start_delta, step);
         else
             fprintf(stderr, "[scan] usage: -marabelliscan frame,slot,input,start_delta[,step]\n");
+    } else if (strncasecmp(arg, "-marabellihard", 14) == 0) {
+        // -marabellihard[N]   guided mode using Hard SCENE_TABLE
+        int32_t delta = arg[14] != '\0' ? (int32_t)atoi(arg + 14) : 0;
+        bRes = explorer::init_guided_hard(delta);
     } else if (strncasecmp(arg, "-marabellimask", 14) == 0) {
         // Usage: -marabellimask,FRAME:SLOT,FRAME:SLOT,...
         // Forces listed slots to use their original offset during -marabelli<N> runs.
