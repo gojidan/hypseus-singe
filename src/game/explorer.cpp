@@ -335,7 +335,7 @@ static const SceneAlias SCENE_ALIASES[] = {
     { 12238, 12190 },  // Catwalk Bats
     { 12669, 12725 },  // Fire Pit Rev
     { 13336, 13303 }, { 13127, 13303 }, { 13041, 13303 },  // Yellow Brick Rev
-    { 14231, 14327 }, { 13875, 14327 },  // Giant Bat
+    { 14231, 14327 },  // Giant Bat (start_dead). 13875 was WRONG — it's a kills_player frame (seq14)
     { 14791, 14847 },  // Elevator Floor
     { 18226, 18282 },  // Wizard Kitchen
     { 21808, 21959 },  // Elevator Rev
