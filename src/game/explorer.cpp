@@ -415,7 +415,8 @@ static uint8_t  s_prev_lives  = 255;
 
 // Guided mode scene tracking
 static const SceneInfo* s_scene       = nullptr; // current scene entry, null = unknown
-static uint32_t         s_scene_start_frame = 0; // disc frame when scene seek fired
+static uint32_t         s_scene_start_frame = 0; // CANONICAL scene frame (for slot offset computation)
+static uint32_t         s_scene_entry_frame = 0; // ACTUAL frame ROM seeked to (alias or canonical) — for arrival check
 static int              s_slot        = 0;        // next slot index to press
 static bool             s_waiting_arrival = false; // true during backward seek to scene
 static uint32_t         s_held_mask   = 0;        // bitmask currently held in guided mode
@@ -496,6 +497,7 @@ bool init_guided(int32_t delta_frames)
     s_move_held         = false;
     s_scene             = nullptr;
     s_scene_start_frame = 0;
+    s_scene_entry_frame = 0;
     s_slot              = 0;
     s_held_mask         = 0;
     s_waiting_arrival   = false;
@@ -641,6 +643,10 @@ void on_search(uint32_t from, uint32_t to)
             // Use canonical scene frame so slot offsets (anchored to canonical) work
             // correctly when ROM enters via alias frames (start_dead etc.)
             s_scene_start_frame = scene->frame_start;
+            // Track the ACTUAL entry frame ROM seeked to — used for arrival check.
+            // Aliases (e.g. start_dead 2406 for Tentacles canonical 2353) land disc
+            // at the alias, not canonical, so arrival must be checked against alias.
+            s_scene_entry_frame = to;
             s_slot              = 0;
             s_held_mask         = 0;
             s_scene_count++;
@@ -813,7 +819,9 @@ Action tick(uint32_t current_disc_frame)
             // For backward seeks, wait until disc physically arrives at the
             // scene start before evaluating any slots.
             if (s_waiting_arrival) {
-                if (current_disc_frame <= s_scene_start_frame + 10u) {
+                // Check arrival against the ACTUAL seek target (entry_frame), not canonical.
+                // When ROM enters via alias frame, disc lands at alias (which may be > canonical).
+                if (current_disc_frame <= s_scene_entry_frame + 10u) {
                     s_waiting_arrival = false;
                     fprintf(stderr, "[explorer] guided: arrived at scene %u (disc=%u)\n",
                             s_scene_start_frame, current_disc_frame);
