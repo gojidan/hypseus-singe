@@ -236,7 +236,8 @@ static const int SCENE_TABLE_COUNT = (int)(sizeof(SCENE_TABLE) / sizeof(SCENE_TA
 //   - Giant Bat: 5 slots (slot 5 = B @195, NEW)
 //   - Many small offset shifts (1-15 frames)
 static const SceneInfo SCENE_TABLE_HARD[] = {
-    { 1887,  2, {{MASK_R,   61}, {MASK_R,   98}}, "Vestibule" },
+    // Vestibule Hard: slot 1 walkthrough "D R" (multi-input). Human played D more often.
+    { 1887,  2, {{MASK_D,   61}, {MASK_R,   98}}, "Vestibule" },
     { 2353,  6, {{MASK_B,   77}, {MASK_U,  137}, {MASK_R, 184},
                  {MASK_D,  224}, {MASK_L,  291}, {MASK_U, 333}}, "Tentacles" },
     { 3097,  4, {{MASK_B,   61}, {MASK_B,   98}, {MASK_B, 141}, {MASK_U, 159}}, "Snake Room" },
@@ -263,7 +264,8 @@ static const SceneInfo SCENE_TABLE_HARD[] = {
     { 12190, 5, {{MASK_U,   59}, {MASK_U,   89}, {MASK_B, 143},
                  {MASK_R,  177}, {MASK_R,  213}}, "Catwalk Bats" },
     { 12725, 4, {{MASK_L,  107}, {MASK_L,  164}, {MASK_L, 209}, {MASK_L, 244}}, "Fire Pit Rev" },
-    { 13303, 9, {{MASK_R,   50}, {MASK_U,   87}, {MASK_L, 137}, {MASK_U, 178},
+    // YBR Rev Hard: slot 1 walkthrough was R, but human played L 5/7 times (multi-input)
+    { 13303, 9, {{MASK_L,   50}, {MASK_U,   87}, {MASK_L, 137}, {MASK_U, 178},
                  {MASK_R,  230}, {MASK_U,  285}, {MASK_B, 364}, {MASK_L, 403},
                  {MASK_U,  447}}, "Yellow Brick Rev" },
     { 14327, 5, {{MASK_B,   10}, {MASK_L,   48}, {MASK_U, 104}, {MASK_B, 163},
@@ -303,9 +305,10 @@ static const SceneInfo SCENE_TABLE_HARD[] = {
     { 26098, 7, {{MASK_D,  127}, {MASK_D,  173}, {MASK_D, 222}, {MASK_D, 269},
                  {MASK_D,  318}, {MASK_D,  364}, {MASK_U, 409}}, "Boulder Trench" },
     { 26778, 3, {{MASK_U,   66}, {MASK_U,  106}, {MASK_L, 233}}, "Three Caves" },
-    // DL Final Hard: 14 slots (3 X→active on Hard at slot 5, 8, 13)
+    // DL Final Hard: 14 slots. Slots 7-8 swapped from initial assumption:
+    // s7 disc 1418 was R but human plays U (X→U on Hard). s8 disc 1442 = R (not U).
     { 28938,14, {{MASK_L,  104}, {MASK_L,  375}, {MASK_L, 578}, {MASK_D, 1130},
-                 {MASK_U, 1225}, {MASK_D, 1303}, {MASK_R, 1418}, {MASK_U, 1442},
+                 {MASK_U, 1225}, {MASK_D, 1303}, {MASK_U, 1418}, {MASK_R, 1442},
                  {MASK_U, 1522}, {MASK_B, 1556}, {MASK_B, 1644}, {MASK_L, 1724},
                  {MASK_B, 1766}, {MASK_B, 1795}}, "Dragon's Lair" },
 };
