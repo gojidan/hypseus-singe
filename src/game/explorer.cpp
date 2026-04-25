@@ -297,7 +297,9 @@ static const SceneInfo SCENE_TABLE_HARD[] = {
                  {MASK_U,  343}, {MASK_U,  385}, {MASK_U, 445}, {MASK_U, 506},
                  {MASK_U,  628}, {MASK_U,  645}}, "Mudmen" },
     // Knight & Light: 4 slots (slot 1 NEW on Hard, very early L)
-    { 25536, 4, {{MASK_L,    9}, {MASK_L,   69}, {MASK_R, 172}, {MASK_R, 248}}, "Knight & Light" },
+    // Note: human samples for slot 1 were disc 5, 9, 11 (median 9). Bot at offset 9
+    // buzzed (window starts later). Moving to 12 puts bot solidly inside window.
+    { 25536, 4, {{MASK_L,   12}, {MASK_L,   69}, {MASK_R, 172}, {MASK_R, 248}}, "Knight & Light" },
     { 26098, 7, {{MASK_D,  127}, {MASK_D,  173}, {MASK_D, 222}, {MASK_D, 269},
                  {MASK_D,  318}, {MASK_D,  364}, {MASK_U, 409}}, "Boulder Trench" },
     { 26778, 3, {{MASK_U,   66}, {MASK_U,  106}, {MASK_L, 233}}, "Three Caves" },
