@@ -55,77 +55,77 @@ static const SceneInfo SCENE_TABLE[] = {
     { 1887,  2, {{MASK_R,   63}, {MASK_R,  100}}, "Vestibule" },
 
     // Tentacles & Halberd
-    { 2353,  6, {{MASK_B, 87}, {MASK_U, 144}, {MASK_R, 195},
-                 {MASK_D, 231}, {MASK_L, 297}, {MASK_U, 348}}, "Tentacles" },
+    { 2353,  6, {{MASK_B,   79}, {MASK_U,  140}, {MASK_R, 188},
+                 {MASK_D,  228}, {MASK_L,  294}, {MASK_U, 345}}, "Tentacles" },
 
     // Snake Room (snake_room — tentacle_room alternate, row 7 col 2)
-    { 3097,  4, {{MASK_B, 55}, {MASK_B,   98}, {MASK_B, 137}, {MASK_U, 159}}, "Snake Room" },
+    { 3097,  4, {{MASK_B,   53}, {MASK_B,   98}, {MASK_B, 137}, {MASK_U, 159}}, "Snake Room" },
 
     // Fire Pit (ropes)
-    { 3561,  4, {{MASK_R,  108}, {MASK_R, 147}, {MASK_R, 198}, {MASK_R, 242}}, "Fire Pit" },
+    { 3561,  4, {{MASK_R,  108}, {MASK_R,  149}, {MASK_R, 197}, {MASK_R, 242}}, "Fire Pit" },
 
     // Yellow Brick Road
-    { 4139,  9, {{MASK_L,   36}, {MASK_U, 72}, {MASK_R, 128}, {MASK_U, 171},
-                 {MASK_L, 224}, {MASK_U,  283}, {MASK_B, 363}, {MASK_R, 400},
+    { 4139,  9, {{MASK_L,   36}, {MASK_U,   79}, {MASK_R, 135}, {MASK_U, 177},
+                 {MASK_L,  230}, {MASK_U,  283}, {MASK_B, 363}, {MASK_R, 400},
                  {MASK_U,  441}}, "Yellow Brick Road" },
 
     // Bubbling Cauldron / Acid Creature (bubbling_cauldron — tentacle_room row 7 col 3)
-    { 5123,  5, {{MASK_U, 48}, {MASK_B, 106}, {MASK_D, 144},
-                 {MASK_B, 177}, {MASK_R, 249}}, "Bubbling Cauldron" },
+    { 5123,  5, {{MASK_U,   56}, {MASK_B, 111}, {MASK_D, 149},
+                 {MASK_B,  180}, {MASK_R,  250}}, "Bubbling Cauldron" },
 
     // Giddy Goons (giddy_goons — flattening_staircase alternate, row 8 col 2)
     // Verified: human run 20260420. Buzz R@100 dropped (not needed to pass scene).
-    { 5683,  4, {{MASK_B, 65}, {MASK_R, 109}, {MASK_B, 163}, {MASK_U, 201}}, "Giddy Goons" },
+    { 5683,  4, {{MASK_B,   66}, {MASK_R,  111}, {MASK_B, 163}, {MASK_U, 201}}, "Giddy Goons" },
 
     // YMCA Room (flattening stairs)
-    { 6375,  4, {{MASK_L, 51}, {MASK_B, 112}, {MASK_L, 145}, {MASK_L, 212}}, "YMCA Room" },
+    { 6375,  4, {{MASK_L,   49}, {MASK_B,  110}, {MASK_L, 143}, {MASK_L, 210}}, "YMCA Room" },
 
     // Forge (Smithee — smithee, row 6 col 1)
     // Verified: human run 20260420. Slot 5 B@374: bot fired at 368 (pre-window), missed.
-    { 6994,  5, {{MASK_B, 60}, {MASK_B, 127}, {MASK_L, 173},
-                 {MASK_B, 233}, {MASK_B,  374}}, "Forge" },
+    { 6994,  5, {{MASK_B,   62}, {MASK_B,  129}, {MASK_L, 175},
+                 {MASK_B,  235}, {MASK_B,  374}}, "Forge" },
 
     // Socker Boppers (grim_reaper — row 5 col 3)
     // Verified: human run 20260420. B@221 buzzed (edge of window); B@230 is safe.
-    { 8004,  4, {{MASK_U,   77}, {MASK_B, 229}, {MASK_D, 280}, {MASK_U, 349}}, "Socker Boppers" },
+    { 8004,  4, {{MASK_U,   77}, {MASK_B,  230}, {MASK_D, 281}, {MASK_U, 350}}, "Socker Boppers" },
 
     // Breathing Door (wind room)
-    { 8709,  1, {{MASK_R, 181}}, "Breathing Door" },
+    { 8709,  1, {{MASK_R,  185}}, "Breathing Door" },
 
     // Bower (bedroom / closing wall)
-    { 9181,  1, {{MASK_U, 2}}, "Bower" },
+    { 9181,  1, {{MASK_U,   6}}, "Bower" },
 
     // Fire Room (lightning / bench over exit)
-    { 9529,  4, {{MASK_R, 76}, {MASK_L, 119}, {MASK_D, 167}, {MASK_L, 215}}, "Fire Room" },
+    { 9529,  4, {{MASK_R,   78}, {MASK_L,  117}, {MASK_D, 165}, {MASK_L, 213}}, "Fire Room" },
 
     // Flying Barding
-    { 10021, 6, {{MASK_R, 102}, {MASK_L,  132}, {MASK_R, 178}, {MASK_L, 225},
-                 {MASK_L, 273}, {MASK_L, 307}}, "Flying Barding" },
+    { 10021, 6, {{MASK_R,   99}, {MASK_L,  132}, {MASK_R, 176}, {MASK_L, 223},
+                 {MASK_L,  271}, {MASK_L,  306}}, "Flying Barding" },
 
     // Chapel (Robot Knight / checkered floor)
-    { 10741, 8, {{MASK_R, 81}, {MASK_L,  123}, {MASK_U, 164}, {MASK_L, 214},
-                 {MASK_R, 260}, {MASK_L, 290}, {MASK_R, 314}, {MASK_B, 371}}, "Chapel" },
+    { 10741, 8, {{MASK_R,   85}, {MASK_L,  123}, {MASK_U, 163}, {MASK_L, 213},
+                 {MASK_R,  259}, {MASK_L,  288}, {MASK_R, 314}, {MASK_B, 371}}, "Chapel" },
 
     // Mausoleum (Crypt Creeps)
-    { 11489, 6, {{MASK_U, 63}, {MASK_B,  103}, {MASK_U, 139},
+    { 11489, 6, {{MASK_U,   61}, {MASK_B,  103}, {MASK_U, 139},
                  {MASK_B,  181}, {MASK_L,  226}, {MASK_B, 262}}, "Mausoleum" },
 
     // Catwalk Bats (catwalk_bats — yellow_brick_road row 9 col 3)
-    { 12190, 5, {{MASK_U,   47}, {MASK_U, 66}, {MASK_B, 138},
-                 {MASK_R, 175}, {MASK_R,  211}}, "Catwalk Bats" },
+    { 12190, 5, {{MASK_U,   47}, {MASK_U,   76}, {MASK_B, 140},
+                 {MASK_R,  177}, {MASK_R,  211}}, "Catwalk Bats" },
 
     // Fire Pit (reversed)
     // Slot 1 accept at disc 12835. Seq3 noseek window 27-44f from ~12837 = 12864-12881 (midpoint 12872 = +147).
     // Slots 3-4 recalculated from seq4/seq5 noseek starts; previous 156/203/248 were at window boundaries.
-    { 12725, 4, {{MASK_L,  110}, {MASK_L, 160}, {MASK_L, 209}, {MASK_L, 250}}, "Fire Pit Rev" },
+    { 12725, 4, {{MASK_L,  110}, {MASK_L,  158}, {MASK_L, 206}, {MASK_L, 248}}, "Fire Pit Rev" },
 
     // Yellow Brick Road (reversed)
-    { 13303, 9, {{MASK_R,   41}, {MASK_U, 68}, {MASK_L, 123}, {MASK_U, 167},
-                 {MASK_R, 216}, {MASK_U, 276}, {MASK_B, 359}, {MASK_L, 397},
-                 {MASK_U, 440}}, "Yellow Brick Rev" },
+    { 13303, 9, {{MASK_R,   41}, {MASK_U,   78}, {MASK_L, 132}, {MASK_U, 176},
+                 {MASK_R,  225}, {MASK_U,  280}, {MASK_B, 363}, {MASK_L, 401},
+                 {MASK_U,  444}}, "Yellow Brick Rev" },
 
     // Giant Bat
-    { 14327, 4, {{MASK_B,   17}, {MASK_L, 48}, {MASK_U, 106}, {MASK_B, 165}}, "Giant Bat" },
+    { 14327, 4, {{MASK_B,   17}, {MASK_L,   46}, {MASK_U, 104}, {MASK_B, 163}}, "Giant Bat" },
 
     // Elevator Floor (always 3-floor version at cycle position 4 — user 2026-04-24)
     // SINGLE input (L), 3 valid floor windows. Cluster analysis from shift sweep:
@@ -137,12 +137,12 @@ static const SceneInfo SCENE_TABLE[] = {
     { 14847, 1, {{MASK_L,  156}}, "Elevator" },
 
     // Forge Reversed (smithee_reversed — smithee row 6 col 2)
-    { 15653, 5, {{MASK_B, 46}, {MASK_B, 125}, {MASK_R, 166},
-                 {MASK_B, 236}, {MASK_B, 375}}, "Forge Rev" },
+    { 15653, 5, {{MASK_B,   54}, {MASK_B,  128}, {MASK_R, 169},
+                 {MASK_B,  239}, {MASK_B,  376}}, "Forge Rev" },
 
     // Flying Barding (reversed)
-    { 16544, 6, {{MASK_L, 94}, {MASK_R,  132}, {MASK_L, 173}, {MASK_R, 224},
-                 {MASK_R, 270}, {MASK_R, 305}}, "Flying Barding Rev" },
+    { 16544, 6, {{MASK_L,   95}, {MASK_R,  132}, {MASK_L, 173}, {MASK_R, 222},
+                 {MASK_R,  268}, {MASK_R,  303}}, "Flying Barding Rev" },
 
     // Pot of Gold (Lizard King)
     // Sequence confirmed by user 2026-04-24: L R R R R R U B B B B (11 slots, single U at #7).
@@ -152,9 +152,9 @@ static const SceneInfo SCENE_TABLE[] = {
     // Our table captures ONE valid path (user's play style). Full alternatives to be modelled
     // in runtime once we formalise multi-input and optional slots (post-windows phase).
     { 17264,11, {{MASK_L,   43}, {MASK_R,  145}, {MASK_R, 234}, {MASK_R, 282},
-                 {MASK_R,  398}, {MASK_R, 449}, {MASK_U, 489},
-                 {MASK_B, 541}, {MASK_B,  572}, {MASK_B, 596},
-                 {MASK_B, 643}}, "Pot of Gold" },
+                 {MASK_R,  398}, {MASK_R,  448}, {MASK_U, 488},
+                 {MASK_B,  540}, {MASK_B,  572}, {MASK_B, 596},
+                 {MASK_B,  641}}, "Pot of Gold" },
 
     // Wizard's Kitchen (Drink Me)
     { 18282, 1, {{MASK_R,   32}}, "Wizard Kitchen" },
@@ -162,63 +162,63 @@ static const SceneInfo SCENE_TABLE[] = {
     // Mausoleum (reversed)
     // Sequence confirmed by user 2026-04-24: U B U B R B (6 slots, mirrors non-rev Mausoleum).
     // Removed phantom duplicate U@72 that was mis-identified as slot 2 from a sub-seek event.
-    { 18662, 6, {{MASK_U,   68}, {MASK_B, 101}, {MASK_U, 136},
+    { 18662, 6, {{MASK_U,   68}, {MASK_B, 101}, {MASK_U, 137},
                  {MASK_B,  179}, {MASK_R, 218}, {MASK_B, 261}}, "Mausoleum Rev" },
 
     // Socker Boppers (reversed) / grim_reaper_reversed
     // After U@90: ROM seeks 19614→19628. Seq3@19628 B window is 73-86f (disc 19701-19714).
     // Old B@174 fired at disc 19694 = offset 66 from 19628 → pre-window → buzz.
     // Fixed: B@187 = disc 19707 = offset 79 from 19628, safely inside window 73-86.
-    { 19520, 4, {{MASK_U,   90}, {MASK_B, 189}, {MASK_D, 253}, {MASK_U, 309}}, "Socker Boppers Rev" },
+    { 19520, 4, {{MASK_U,   90}, {MASK_B,  187}, {MASK_D, 251}, {MASK_U, 307}}, "Socker Boppers Rev" },
 
     // Note: smithee_reversed (Forge reversed, frame 15653) is already in the table above.
     // 19628 is a Socker Boppers rev sub-seek target — no entry here prevents false scene-switch.
 
     // Tilting Room (tilting_room — row 11 col 2)
     // Verified: human run 20260420. Visit 1: D@97+U@128 → death (missed L). Visit 2: D@95+U@130+L@164 → success.
-    { 20187, 3, {{MASK_D, 101}, {MASK_U, 136}, {MASK_L,  164}}, "Tilting Room" },
+    { 20187, 3, {{MASK_D,   98}, {MASK_U,  133}, {MASK_L,  164}}, "Tilting Room" },
 
     // Throne Room (throne_room — row 11 col 1)
     // Levels.json move "U,R" is split into two ROM windows: U@78 then R@87.
-    { 20674, 4, {{MASK_R, 59}, {MASK_U,   78}, {MASK_R, 89}, {MASK_R, 201}}, "Throne Room" },
+    { 20674, 4, {{MASK_R,   55}, {MASK_U,   78}, {MASK_R,  87}, {MASK_R, 199}}, "Throne Room" },
 
     // Chapel Reversed (robot_knight_reversed — row 10 col 2)
     // 10 slots across noseek sequences; our log captured all from a cycle-2 visit.
-    { 21212, 8, {{MASK_L, 93}, {MASK_R,  129}, {MASK_U, 167}, {MASK_R, 211},
-                 {MASK_L,  263}, {MASK_R, 292}, {MASK_L, 317},
-                 {MASK_B, 380}}, "Chapel Rev" },
+    { 21212, 8, {{MASK_L,   92}, {MASK_R,  129}, {MASK_U, 167}, {MASK_R, 211},
+                 {MASK_L,  263}, {MASK_R,  290}, {MASK_L, 315},
+                 {MASK_B,  378}}, "Chapel Rev" },
 
     // Elevator Floor (9-level, reversed)
     { 21959, 1, {{MASK_R,  155}}, "Elevator Rev" },
 
     // Pirates of the Caribbean
-    { 22936,13, {{MASK_L,   16}, {MASK_R, 52}, {MASK_L, 101}, {MASK_R, 147},
-                 {MASK_U, 276}, {MASK_U,  344}, {MASK_U, 405}, {MASK_U, 471},
-                 {MASK_R,  596}, {MASK_L,  671}, {MASK_R, 734}, {MASK_L, 796},
-                 {MASK_R, 912}}, "Pirates" },
+    { 22936,13, {{MASK_L,   16}, {MASK_R,   56}, {MASK_L, 105}, {MASK_R, 151},
+                 {MASK_U,  280}, {MASK_U,  344}, {MASK_U, 405}, {MASK_U, 471},
+                 {MASK_R,  596}, {MASK_L,  671}, {MASK_R, 735}, {MASK_L, 797},
+                 {MASK_R,  913}}, "Pirates" },
 
     // Mudmen
     // Slot 7 U@442 fired at disc 24820 = ~60f into seq8, but landed in death zone boundary.
     // seq8 UP success window is 46-63f from start (~24762); fixed to U@436 = disc 24814 = ~52f.
     // ROM-verified 20260423: slot 7 window disc 24809-24837 (W=28), center offset 445.
-    { 24378, 9, {{MASK_B,  128}, {MASK_U,  217}, {MASK_U, 252}, {MASK_U, 302},
-                 {MASK_U,  335}, {MASK_U,  382}, {MASK_U, 445}, {MASK_U, 502},
-                 {MASK_U, 622}}, "Mudmen" },
+    { 24378, 9, {{MASK_B,  128}, {MASK_U,  217}, {MASK_U, 248}, {MASK_U, 302},
+                 {MASK_U,  335}, {MASK_U,  382}, {MASK_U, 445}, {MASK_U, 500},
+                 {MASK_U,  620}}, "Mudmen" },
 
     // Knight & Light (Black Knight / horse)
     // 3-slot data from cycle 3 visit; cycles 1-2 only have 2 slots but the
     // extra press on an already-ended scene is harmless.
-    { 25536, 3, {{MASK_L, 71}, {MASK_L, 164}, {MASK_R, 238}}, "Knight & Light" },
+    { 25536, 3, {{MASK_L,   74}, {MASK_L,  170}, {MASK_R, 242}}, "Knight & Light" },
 
     // Boulder Trench (colored balls)
-    { 26098, 7, {{MASK_D, 130}, {MASK_D, 182}, {MASK_D, 231}, {MASK_D, 279},
-                 {MASK_D, 324}, {MASK_D, 368}, {MASK_U, 411}}, "Boulder Trench" },
+    { 26098, 7, {{MASK_D,  128}, {MASK_D,  178}, {MASK_D, 227}, {MASK_D, 275},
+                 {MASK_D,  322}, {MASK_D,  366}, {MASK_U, 411}}, "Boulder Trench" },
 
     // Three Caves (jagged door / geyser)
     { 26778, 3, {{MASK_U,   58}, {MASK_U,  102}, {MASK_L, 234}}, "Three Caves" },
 
     // Dragon's Lair (final)
-    { 28938,12, {{MASK_L,  108}, {MASK_L,  381}, {MASK_L, 580}, {MASK_L, 568},
+    { 28938,12, {{MASK_L,  108}, {MASK_L,  381}, {MASK_L, 574}, {MASK_L, 582},
                  {MASK_D, 1124}, {MASK_D, 1301},
                  {MASK_R, 1437}, {MASK_U, 1520},
                  {MASK_B, 1556}, {MASK_B, 1644}, {MASK_L,1733}, {MASK_B,1795}}, "Dragon's Lair" },
@@ -643,7 +643,32 @@ void on_search(uint32_t from, uint32_t to)
         }
 
         const SceneInfo* scene = find_scene(to);
-        if (scene) {
+        // BUGFIX 2026-04-26: when ROM enters a scene via alias (e.g. start_dead
+        // 24322 for Mudmen canonical 24378) and then sub-seeks to the canonical
+        // frame, find_scene(canonical) re-matches the same scene.  Treating that
+        // as a fresh entry would reset s_current_first_visit to false (because
+        // s_scene_visited[idx] was just set), silently disabling the global-shift
+        // delta on all slot inputs.  Detect this case and treat as sub-seek.
+        if (scene && scene == s_scene && !s_held_mask) {
+            s_scene_entry_frame = to;
+            while (s_slot < s_scene->slot_count) {
+                uint32_t target = slot_target_frame(
+                    s_scene_start_frame,
+                    s_scene->slots[s_slot].frame_offset,
+                    s_current_first_visit ? s_delta_frames : 0);
+                if (to > target) {
+                    fprintf(stderr, "[explorer] guided: alias->canonical sub-seek %u->%u skips slot %d (target %u)\n",
+                            from, to, s_slot, target);
+                    fflush(stderr);
+                    s_slot++;
+                } else break;
+            }
+            if (s_slot >= s_scene->slot_count) {
+                fprintf(stderr, "[explorer] guided: all slots done after alias-sub-seek\n");
+                fflush(stderr);
+                s_scene = nullptr;
+            }
+        } else if (scene) {
             s_scene             = scene;
             // Use canonical scene frame so slot offsets (anchored to canonical) work
             // correctly when ROM enters via alias frames (start_dead etc.)
