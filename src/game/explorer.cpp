@@ -656,7 +656,15 @@ void on_search(uint32_t from, uint32_t to)
         // as a fresh entry would reset s_current_first_visit to false (because
         // s_scene_visited[idx] was just set), silently disabling the global-shift
         // delta on all slot inputs.  Detect this case and treat as sub-seek.
-        if (scene && scene == s_scene && !s_held_mask) {
+        //
+        // BUGFIX 2026-04-26 #3: gate the sub-seek branch by s_pending_visit_idx >= 0.
+        // The pending token is set on entry and consumed on first press.  If it's
+        // still pending, we're in the entry+canonical-sub-seek phase (no press yet).
+        // If it has been consumed, the search to the same scene is a respawn from
+        // the death queue — must be handled as fresh entry so s_current_first_visit
+        // gets recomputed (= false because s_scene_visited[idx] is true) and the
+        // bot uses original offsets, allowing the death queue to recover the run.
+        if (scene && scene == s_scene && !s_held_mask && s_pending_visit_idx >= 0) {
             s_scene_entry_frame = to;
             while (s_slot < s_scene->slot_count) {
                 uint32_t target = slot_target_frame(
