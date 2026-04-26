@@ -613,6 +613,27 @@ void on_search(uint32_t from, uint32_t to)
 {
     if (!s_active) return;
 
+    // BUGFIX 2026-04-26 #5: detect post-game attract transition.
+    // After the bot wins (kills the dragon in DL Final), the ROM seeks back
+    // to attract frames (~323) but the bot stayed in PLAYING state, ticking
+    // and generating spurious BUTTON1 presses against the attract loop.
+    // This caused the ROM to receive ~100 spurious input writes that
+    // desynchronised the VLDP audio decoder ("audio reading scenes not
+    // shown on video, everything sped up" — observed 2026-04-26).
+    // Force GAMEOVER on big high->low seeks while in PLAYING so the bot
+    // releases all inputs and waits for attract cleanly.
+    if (s_state == PLAYING && to < 1500 && from > 20000) {
+        fprintf(stderr, "[explorer] post-game attract transition (%u -> %u) — forcing GAMEOVER\n",
+                from, to);
+        fflush(stderr);
+        s_move_held = false;
+        s_held_mask = 0;
+        s_scene     = nullptr;
+        s_pending_visit_idx = -1;
+        enter_state(GAMEOVER);
+        return;
+    }
+
     // Stuck detection (simple mode)
     if (!s_guided && s_state == PLAYING) {
         s_recent_to[s_recent_idx] = to;
