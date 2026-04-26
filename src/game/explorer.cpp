@@ -403,6 +403,13 @@ static bool     s_use_hard_table = false;
 // can progress past slots whose shifted offset falls outside the ROM window.
 static bool     s_scene_visited[128] = {false}; // indexed by scene_table_idx
 static bool     s_current_first_visit = false;
+// BUGFIX 2026-04-26 #2: track scene_idx of current visit so s_scene_visited
+// can be set ONLY when the first input is actually pressed, not on entry.
+// Without this, "abortive" visits (entry + immediate seek-out without any
+// input) would consume the first-visit token, causing later real visits to
+// run with shift=0 and silently corrupt the sweep data (observed on YBR,
+// YBR Reversed, Bower in Easy sweep 2026-04-26).
+static int      s_pending_visit_idx = -1;
 
 // Global-shift mask: list of (scene_frame, slot_idx_0based) pairs that force
 // the original offset (delta=0) during -marabelli<N> runs.  Used to bypass
@@ -680,14 +687,18 @@ void on_search(uint32_t from, uint32_t to)
             s_slot              = 0;
             s_held_mask         = 0;
             s_scene_count++;
-            // Track first visit for global-shift mode
+            // Track first visit for global-shift mode.
+            // BUGFIX: defer s_scene_visited[idx]=true to first input press.
+            // Setting it on entry would mark abortive visits (entry+seek out
+            // with no input) as "visited", causing later real visits to lose shift.
             const SceneInfo* base_table = s_use_hard_table ? SCENE_TABLE_HARD : SCENE_TABLE;
             int scene_idx = (int)(scene - base_table);
             if (scene_idx >= 0 && scene_idx < (int)(sizeof(s_scene_visited)/sizeof(s_scene_visited[0]))) {
                 s_current_first_visit = !s_scene_visited[scene_idx];
-                s_scene_visited[scene_idx] = true;
+                s_pending_visit_idx = scene_idx;  // mark pending; consume on first press
             } else {
                 s_current_first_visit = true;
+                s_pending_visit_idx = -1;
             }
             // If seeking backward (from > to) the disc hasn't arrived yet —
             // current_disc_frame is still the old high value.  Suppress slot
@@ -812,6 +823,7 @@ Action tick(uint32_t current_disc_frame)
             // Reset first-visit tracking for global-shift mode
             memset(s_scene_visited, 0, sizeof(s_scene_visited));
             s_current_first_visit = true;
+            s_pending_visit_idx = -1;
             enter_state(PLAYING);
         }
         break;
@@ -889,6 +901,14 @@ Action tick(uint32_t current_disc_frame)
                     action.press_mask = eff_mask;
                     s_held_mask       = eff_mask;
                     s_hold_end_nmi    = s_nmi + PULSE_PRESS;
+                    // BUGFIX 2026-04-26 #2: consume the pending first-visit token
+                    // ONLY when an input is actually pressed.  Abortive visits
+                    // (entry without any press) never consume the token, so a
+                    // later real visit retains shift application.
+                    if (s_pending_visit_idx >= 0) {
+                        s_scene_visited[s_pending_visit_idx] = true;
+                        s_pending_visit_idx = -1;
+                    }
                     fprintf(stderr, "[explorer] %s: slot %d mask=0x%x @ disc=%u"
                             " (target=%u offset=%d%+d)\n",
                             is_scan_slot ? "SCAN" : "guided",
