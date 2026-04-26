@@ -3,6 +3,7 @@
 #include "../video/video.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>  // for exit() on sweep run completion (BUGFIX #6)
 #include <string.h>
 
 // NMI fires every ~25-33 ms depending on emulation speed.
@@ -410,6 +411,12 @@ static bool     s_current_first_visit = false;
 // run with shift=0 and silently corrupt the sweep data (observed on YBR,
 // YBR Reversed, Bower in Easy sweep 2026-04-26).
 static int      s_pending_visit_idx = -1;
+// BUGFIX 2026-04-26 #6: signal post-game termination.  After winning DL Final,
+// the bot was rolling into a second game (ATTRACT auto-coin), inflating logs
+// and confusing the orchestrator.  Set this flag in #5's post-game transition
+// detector; GAMEOVER state will then call exit(0) instead of re-entering
+// ATTRACT, so each orchestrator-launched Hypseus terminates after one game.
+static bool     s_quit_after_gameover = false;
 
 // Global-shift mask: list of (scene_frame, slot_idx_0based) pairs that force
 // the original offset (delta=0) during -marabelli<N> runs.  Used to bypass
@@ -623,13 +630,14 @@ void on_search(uint32_t from, uint32_t to)
     // Force GAMEOVER on big high->low seeks while in PLAYING so the bot
     // releases all inputs and waits for attract cleanly.
     if (s_state == PLAYING && to < 1500 && from > 20000) {
-        fprintf(stderr, "[explorer] post-game attract transition (%u -> %u) — forcing GAMEOVER\n",
+        fprintf(stderr, "[explorer] post-game attract transition (%u -> %u) — forcing GAMEOVER + quit\n",
                 from, to);
         fflush(stderr);
         s_move_held = false;
         s_held_mask = 0;
         s_scene     = nullptr;
         s_pending_visit_idx = -1;
+        s_quit_after_gameover = true;  // BUGFIX #6: terminate Hypseus after this game
         enter_state(GAMEOVER);
         return;
     }
@@ -873,6 +881,7 @@ Action tick(uint32_t current_disc_frame)
             memset(s_scene_visited, 0, sizeof(s_scene_visited));
             s_current_first_visit = true;
             s_pending_visit_idx = -1;
+            s_scene_count = 0;  // reset per-game scene counter
             enter_state(PLAYING);
         }
         break;
@@ -995,9 +1004,24 @@ Action tick(uint32_t current_disc_frame)
             }
         }
         if (elapsed >= GAMEOVER_WAIT) {
+            // BUGFIX 2026-04-26 #6: if this GAMEOVER follows a successful
+            // game completion (post-game attract transition detected by #5),
+            // terminate Hypseus instead of re-entering ATTRACT.  Otherwise the
+            // bot rolls into a second game with the same -marabelli<N> delta,
+            // inflating the orchestrator's per-delta log with multiple games
+            // and not resetting per-run state (s_scene_count, etc.).
+            if (s_quit_after_gameover) {
+                fprintf(stderr, "[explorer] sweep run complete — terminating Hypseus\n");
+                fflush(stderr);
+                exit(0);
+            }
             s_prev_lives = 255;
             s_scene      = nullptr;
             s_slot       = 0;
+            s_scene_count = 0;
+            memset(s_scene_visited, 0, sizeof(s_scene_visited));
+            s_pending_visit_idx = -1;
+            s_current_first_visit = true;
             enter_state(ATTRACT);
         }
         break;
