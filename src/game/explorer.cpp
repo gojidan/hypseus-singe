@@ -684,6 +684,27 @@ void on_search(uint32_t from, uint32_t to)
                 s_scene = nullptr;
             }
         } else if (scene) {
+            // BUGFIX 2026-04-26 #4: closing the previous pending visit.
+            // If the previous scene had a pending visit token (no press) but the
+            // visit lasted >= 100 disc frames, count it as a real attempt and
+            // consume the token.  Without this, scenes where the bot doesn't
+            // press in time (e.g. shifted target beyond the scene's last frame)
+            // keep their token pending forever, so every death-queue retry
+            // re-applies shift -> infinite loop (observed on Fire Pit at +15).
+            // Abortive visits (entry + immediate seek-out, < 100 frames) still
+            // leave the token pending so the next real visit retains shift.
+            if (s_scene && s_pending_visit_idx >= 0) {
+                uint32_t visit_dur = (from > s_scene_entry_frame)
+                                     ? (from - s_scene_entry_frame) : 0;
+                if (visit_dur >= 100) {
+                    s_scene_visited[s_pending_visit_idx] = true;
+                    fprintf(stderr, "[explorer] guided: visit token consumed (no press, dur=%u >= 100 frames)\n",
+                            visit_dur);
+                    fflush(stderr);
+                }
+                s_pending_visit_idx = -1;
+            }
+
             s_scene             = scene;
             // Use canonical scene frame so slot offsets (anchored to canonical) work
             // correctly when ROM enters via alias frames (start_dead etc.)
@@ -696,14 +717,13 @@ void on_search(uint32_t from, uint32_t to)
             s_held_mask         = 0;
             s_scene_count++;
             // Track first visit for global-shift mode.
-            // BUGFIX: defer s_scene_visited[idx]=true to first input press.
-            // Setting it on entry would mark abortive visits (entry+seek out
-            // with no input) as "visited", causing later real visits to lose shift.
+            // BUGFIX: defer s_scene_visited[idx]=true to first input press
+            // OR to scene close with visit_dur >= 100 (handled above).
             const SceneInfo* base_table = s_use_hard_table ? SCENE_TABLE_HARD : SCENE_TABLE;
             int scene_idx = (int)(scene - base_table);
             if (scene_idx >= 0 && scene_idx < (int)(sizeof(s_scene_visited)/sizeof(s_scene_visited[0]))) {
                 s_current_first_visit = !s_scene_visited[scene_idx];
-                s_pending_visit_idx = scene_idx;  // mark pending; consume on first press
+                s_pending_visit_idx = scene_idx;  // mark pending; consume on press OR long-enough visit
             } else {
                 s_current_first_visit = true;
                 s_pending_visit_idx = -1;
