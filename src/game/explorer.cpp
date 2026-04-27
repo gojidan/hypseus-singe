@@ -652,17 +652,25 @@ void on_search(uint32_t from, uint32_t to)
     // pending token forever.  STUCK detection breaks the loop: same `to` >=
     // STUCK_COUNT times in last STUCK_WINDOW searches => force GAMEOVER+quit.
     if (s_state == PLAYING) {
-        s_recent_to[s_recent_idx] = to;
+        // BUGFIX 2026-04-27 #9: resolve alias->canonical before counting.
+        // Fire Pit loop alternated 3 frames (3561 canonical, 3505 alias,
+        // 3963 cinematic exit) — each appeared only 2 times in WINDOW=6,
+        // never reaching STUCK_COUNT=3.  By collapsing aliases to canonical
+        // (3505 -> 3561), the canonical frame appears 4+ times and STUCK
+        // triggers on time.
+        uint32_t key = resolve_canonical_frame(to);
+        if (key == 0) key = to;  // not in alias map -> use raw
+        s_recent_to[s_recent_idx] = key;
         s_recent_idx = (s_recent_idx + 1) % STUCK_WINDOW;
 
         int count = 0;
         for (int i = 0; i < STUCK_WINDOW; i++) {
-            if (s_recent_to[i] == to) count++;
+            if (s_recent_to[i] == key) count++;
         }
 
         if (count >= STUCK_COUNT) {
-            fprintf(stderr, "[explorer] STUCK at frame %u (%d/%d in last %d) — forcing GAMEOVER+quit\n",
-                    to, count, STUCK_COUNT, STUCK_WINDOW);
+            fprintf(stderr, "[explorer] STUCK at frame %u (canonical %u, %d/%d in last %d) — forcing GAMEOVER+quit\n",
+                    to, key, count, STUCK_COUNT, STUCK_WINDOW);
             fflush(stderr);
             s_move_held = false;
             s_held_mask = 0;
