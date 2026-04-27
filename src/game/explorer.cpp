@@ -668,35 +668,31 @@ void on_search(uint32_t from, uint32_t to)
         // consistent.  Observed 2026-04-27 at +13/+14: bot pressed Elevator
         // slot 1 OK, then ROM's normal respawn-and-retry sequence triggered
         // false STUCK and terminated Hypseus mid-Elevator.
-        if (key == 14847u || key == 21959u || key == 28938u) {
-            // Don't record this entry to s_recent_to; skip detection but allow
-            // normal flow to continue.
-            goto stuck_check_done;
-        }
-        s_recent_to[s_recent_idx] = key;
-        s_recent_idx = (s_recent_idx + 1) % STUCK_WINDOW;
+        if (key != 14847u && key != 21959u && key != 28938u) {
+            s_recent_to[s_recent_idx] = key;
+            s_recent_idx = (s_recent_idx + 1) % STUCK_WINDOW;
 
-        int count = 0;
-        for (int i = 0; i < STUCK_WINDOW; i++) {
-            if (s_recent_to[i] == key) count++;
-        }
+            int count = 0;
+            for (int i = 0; i < STUCK_WINDOW; i++) {
+                if (s_recent_to[i] == key) count++;
+            }
 
-        if (count >= STUCK_COUNT) {
-            fprintf(stderr, "[explorer] STUCK at frame %u (canonical %u, %d/%d in last %d) — forcing GAMEOVER+quit\n",
-                    to, key, count, STUCK_COUNT, STUCK_WINDOW);
-            fflush(stderr);
-            s_move_held = false;
-            s_held_mask = 0;
-            s_scene = nullptr;
-            s_pending_visit_idx = -1;
-            memset(s_recent_to, 0, sizeof(s_recent_to));
-            // For guided sweep mode, terminate Hypseus so orchestrator moves
-            // to the next delta instead of timing out for 14 minutes.
-            if (s_guided) s_quit_after_gameover = true;
-            enter_state(GAMEOVER);
-            return;
+            if (count >= STUCK_COUNT) {
+                fprintf(stderr, "[explorer] STUCK at frame %u (canonical %u, %d/%d in last %d) — forcing GAMEOVER+quit\n",
+                        to, key, count, STUCK_COUNT, STUCK_WINDOW);
+                fflush(stderr);
+                s_move_held = false;
+                s_held_mask = 0;
+                s_scene = nullptr;
+                s_pending_visit_idx = -1;
+                memset(s_recent_to, 0, sizeof(s_recent_to));
+                // For guided sweep mode, terminate Hypseus so orchestrator moves
+                // to the next delta instead of timing out for 14 minutes.
+                if (s_guided) s_quit_after_gameover = true;
+                enter_state(GAMEOVER);
+                return;
+            }
         }
-    stuck_check_done:;
     }
 
     // Guided mode: identify scene from table
