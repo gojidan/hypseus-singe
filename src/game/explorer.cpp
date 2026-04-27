@@ -1,9 +1,9 @@
 #include "explorer.h"
 #include "../io/input.h"
 #include "../video/video.h"
+#include "../hypseus.h"   // for set_quitflag() — graceful shutdown
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>  // for exit() on sweep run completion (BUGFIX #6)
 #include <string.h>
 
 // NMI fires every ~25-33 ms depending on emulation speed.
@@ -1025,9 +1025,16 @@ Action tick(uint32_t current_disc_frame)
             // inflating the orchestrator's per-delta log with multiple games
             // and not resetting per-run state (s_scene_count, etc.).
             if (s_quit_after_gameover) {
-                fprintf(stderr, "[explorer] sweep run complete — terminating Hypseus\n");
+                // BUGFIX #8: use Hypseus's set_quitflag() instead of exit(0).
+                // exit(0) skipped graceful shutdown — VLDP/audio/video resources
+                // remained locked, so the next orchestrator-launched Hypseus
+                // failed to start (observed 2026-04-27: log +14 had only 2
+                // events at 3 seconds — Hypseus crashed before reaching PLAYING).
+                fprintf(stderr, "[explorer] sweep run complete — graceful quit\n");
                 fflush(stderr);
-                exit(0);
+                set_quitflag();
+                s_active = false;
+                return action;  // let the main loop wind down naturally
             }
             s_prev_lives = 255;
             s_scene      = nullptr;
