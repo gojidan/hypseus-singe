@@ -660,14 +660,15 @@ void on_search(uint32_t from, uint32_t to)
         // triggers on time.
         uint32_t key = resolve_canonical_frame(to);
         if (key == 0) key = to;  // not in alias map -> use raw
-        // BUGFIX 2026-04-27 #10: skip stuck-tracking for Elevator scenes
-        // (14847 = 3-floor Elevator, 21959 = 9-floor end-of-cycle).  The 9-floor
-        // version legitimately allows multiple respawns to retry floor selection.
-        // Even the 3-floor has entry+sub-seek+alias pattern that yields 3 hits
-        // per single visit after canonical collapse (14847 + 14791->14847 +
-        // 14847 = 3 in window=6).  Without this skip, fix #9 misfires and
-        // terminates Hypseus mid-Elevator (observed 2026-04-27 at +13/+14).
-        if (key == 14847u || key == 21959u) {
+        // BUGFIX 2026-04-27 #10: skip stuck-tracking for shift_exempt scenes
+        // (14847 = 3-floor Elevator, 21959 = 9-floor end-of-cycle, 28938 = DL Final).
+        // Their entry+respawn+sub-seek patterns yield 3 hits per legitimate visit
+        // after canonical collapse, falsely triggering STUCK in fix #9.  These
+        // scenes are already shift_exempt so excluding from stuck detection is
+        // consistent.  Observed 2026-04-27 at +13/+14: bot pressed Elevator
+        // slot 1 OK, then ROM's normal respawn-and-retry sequence triggered
+        // false STUCK and terminated Hypseus mid-Elevator.
+        if (key == 14847u || key == 21959u || key == 28938u) {
             // Don't record this entry to s_recent_to; skip detection but allow
             // normal flow to continue.
             goto stuck_check_done;
