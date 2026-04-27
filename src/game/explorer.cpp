@@ -642,56 +642,34 @@ void on_search(uint32_t from, uint32_t to)
         return;
     }
 
-    // Stuck detection (works for BOTH simple and guided modes).
-    // BUGFIX 2026-04-27 #7: at extreme deltas the bot can be unable to press
-    // any slot of a scene (target frame beyond scene exit), and the death-queue
-    // respawn makes ROM re-enter the same scene via unmapped frames (e.g.
-    // Flying Barding Rev 16544 looped 55 times at +22, frames 16488 and 16976
-    // not in SCENE_ALIASES).  Fix #4's "consume token at scene close" only
-    // fires on entry to a DIFFERENT scene; same-scene re-entries leave the
-    // pending token forever.  STUCK detection breaks the loop: same `to` >=
-    // STUCK_COUNT times in last STUCK_WINDOW searches => force GAMEOVER+quit.
-    if (s_state == PLAYING) {
-        // BUGFIX 2026-04-27 #9: resolve alias->canonical before counting.
-        // Fire Pit loop alternated 3 frames (3561 canonical, 3505 alias,
-        // 3963 cinematic exit) — each appeared only 2 times in WINDOW=6,
-        // never reaching STUCK_COUNT=3.  By collapsing aliases to canonical
-        // (3505 -> 3561), the canonical frame appears 4+ times and STUCK
-        // triggers on time.
-        uint32_t key = resolve_canonical_frame(to);
-        if (key == 0) key = to;  // not in alias map -> use raw
-        // BUGFIX 2026-04-27 #10: skip stuck-tracking for shift_exempt scenes
-        // (14847 = 3-floor Elevator, 21959 = 9-floor end-of-cycle, 28938 = DL Final).
-        // Their entry+respawn+sub-seek patterns yield 3 hits per legitimate visit
-        // after canonical collapse, falsely triggering STUCK in fix #9.  These
-        // scenes are already shift_exempt so excluding from stuck detection is
-        // consistent.  Observed 2026-04-27 at +13/+14: bot pressed Elevator
-        // slot 1 OK, then ROM's normal respawn-and-retry sequence triggered
-        // false STUCK and terminated Hypseus mid-Elevator.
-        if (key != 14847u && key != 21959u && key != 28938u) {
-            s_recent_to[s_recent_idx] = key;
-            s_recent_idx = (s_recent_idx + 1) % STUCK_WINDOW;
+    // Stuck detection (simple mode only).
+    // ROLLBACK 2026-04-27 sera: i fix #7/#9/#10 estesi alla guided mode hanno
+    // introdotto comportamenti collaterali (audio "Save me" ripetuto, loop
+    // graceful percepiti come anomali, false STUCK su scene multi-tentativo
+    // anche dopo skip Elevator/DL Final).  Manteniamo solo la stuck detection
+    // per simple mode (esistente da sempre) e accettiamo che in guided mode
+    // a delta estremi le scene loopanti raggiungano il timeout 14-min
+    // dell'orchestratore — comportamento prevedibile e stabile.
+    // I fix #5/#6/#8 (chiusura graceful dopo VITTORIA DL Final) restano
+    // attivi: il bot termina rapidamente dopo aver vinto, risparmiando
+    // ~2 min di attract loop per ogni run vincente.
+    if (!s_guided && s_state == PLAYING) {
+        s_recent_to[s_recent_idx] = to;
+        s_recent_idx = (s_recent_idx + 1) % STUCK_WINDOW;
 
-            int count = 0;
-            for (int i = 0; i < STUCK_WINDOW; i++) {
-                if (s_recent_to[i] == key) count++;
-            }
+        int count = 0;
+        for (int i = 0; i < STUCK_WINDOW; i++) {
+            if (s_recent_to[i] == to) count++;
+        }
 
-            if (count >= STUCK_COUNT) {
-                fprintf(stderr, "[explorer] STUCK at frame %u (canonical %u, %d/%d in last %d) — forcing GAMEOVER+quit\n",
-                        to, key, count, STUCK_COUNT, STUCK_WINDOW);
-                fflush(stderr);
-                s_move_held = false;
-                s_held_mask = 0;
-                s_scene = nullptr;
-                s_pending_visit_idx = -1;
-                memset(s_recent_to, 0, sizeof(s_recent_to));
-                // For guided sweep mode, terminate Hypseus so orchestrator moves
-                // to the next delta instead of timing out for 14 minutes.
-                if (s_guided) s_quit_after_gameover = true;
-                enter_state(GAMEOVER);
-                return;
-            }
+        if (count >= STUCK_COUNT) {
+            fprintf(stderr, "[explorer] STUCK at frame %u (%d/%d) — forcing restart\n",
+                    to, count, STUCK_WINDOW);
+            fflush(stderr);
+            s_move_held = false;
+            memset(s_recent_to, 0, sizeof(s_recent_to));
+            enter_state(GAMEOVER);
+            return;
         }
     }
 
