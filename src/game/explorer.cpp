@@ -642,8 +642,16 @@ void on_search(uint32_t from, uint32_t to)
         return;
     }
 
-    // Stuck detection (simple mode)
-    if (!s_guided && s_state == PLAYING) {
+    // Stuck detection (works for BOTH simple and guided modes).
+    // BUGFIX 2026-04-27 #7: at extreme deltas the bot can be unable to press
+    // any slot of a scene (target frame beyond scene exit), and the death-queue
+    // respawn makes ROM re-enter the same scene via unmapped frames (e.g.
+    // Flying Barding Rev 16544 looped 55 times at +22, frames 16488 and 16976
+    // not in SCENE_ALIASES).  Fix #4's "consume token at scene close" only
+    // fires on entry to a DIFFERENT scene; same-scene re-entries leave the
+    // pending token forever.  STUCK detection breaks the loop: same `to` >=
+    // STUCK_COUNT times in last STUCK_WINDOW searches => force GAMEOVER+quit.
+    if (s_state == PLAYING) {
         s_recent_to[s_recent_idx] = to;
         s_recent_idx = (s_recent_idx + 1) % STUCK_WINDOW;
 
@@ -653,11 +661,17 @@ void on_search(uint32_t from, uint32_t to)
         }
 
         if (count >= STUCK_COUNT) {
-            fprintf(stderr, "[explorer] STUCK at frame %u (%d/%d) — forcing restart\n",
-                    to, count, STUCK_WINDOW);
+            fprintf(stderr, "[explorer] STUCK at frame %u (%d/%d in last %d) — forcing GAMEOVER+quit\n",
+                    to, count, STUCK_COUNT, STUCK_WINDOW);
             fflush(stderr);
             s_move_held = false;
+            s_held_mask = 0;
+            s_scene = nullptr;
+            s_pending_visit_idx = -1;
             memset(s_recent_to, 0, sizeof(s_recent_to));
+            // For guided sweep mode, terminate Hypseus so orchestrator moves
+            // to the next delta instead of timing out for 14 minutes.
+            if (s_guided) s_quit_after_gameover = true;
             enter_state(GAMEOVER);
             return;
         }
