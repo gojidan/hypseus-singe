@@ -883,7 +883,9 @@ bool lair::init()
             fprintf(stderr, "[lair] load_state restored — seeking LDP to frame %u\n", saved_frame);
             fflush(stderr);
             if (g_ldp) {
-                g_ldp->pre_search(saved_frame, true);
+                char frame_str[16];
+                snprintf(frame_str, sizeof(frame_str), "%u", saved_frame);
+                g_ldp->pre_search(frame_str, true);
             }
             // If a test input was specified (-loadstate PATH:OFFSET:INPUT:TIMEOUT),
             // arm test mode in explorer: it will skip boot/attract, wait for the
