@@ -874,12 +874,22 @@ bool lair::init()
     // context) and seek LDP to the saved disc frame.  ROM resumes from
     // the saved scene immediately, skipping boot/attract/coin/start.
     if (bResult && save_state::is_load_armed()) {
+        // Snapshot test parameters BEFORE try_load_armed (which disarms).
+        int32_t  test_offset  = save_state::get_test_frame_offset();
+        char     test_input   = save_state::get_test_input();
+        uint32_t test_timeout = save_state::get_test_timeout_ms();
         uint32_t saved_frame = 0;
         if (save_state::try_load_armed(m_cpumem, cpu::MEM_SIZE, &saved_frame)) {
             fprintf(stderr, "[lair] load_state restored — seeking LDP to frame %u\n", saved_frame);
             fflush(stderr);
             if (g_ldp) {
                 g_ldp->pre_search(saved_frame, true);
+            }
+            // If a test input was specified (-loadstate PATH:OFFSET:INPUT:TIMEOUT),
+            // arm test mode in explorer: it will skip boot/attract, wait for the
+            // target frame, apply the input, capture for timeout, then quit.
+            if (test_input != '\0' && test_input != '-') {
+                explorer::init_test_mode(saved_frame, test_offset, test_input, test_timeout);
             }
         } else {
             fprintf(stderr, "[lair] load_state FAILED — continuing with normal init\n");

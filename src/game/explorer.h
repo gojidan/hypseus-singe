@@ -73,6 +73,26 @@ bool init_scan(uint32_t frame, int slot, char input_char,
 // are already characterised.  frame=scene_start (e.g. 2353), slot_1based=1..N
 bool add_shift_mask(uint32_t frame, int slot_1based);
 
+// 2026-04-28: Test mode (frame-by-frame deterministic scan).
+// Used together with -loadstate: after the state is loaded, the bot starts
+// directly in PLAYING (no BOOT/ATTRACT/COIN), waits for current_disc to reach
+// target_frame, applies a single input pulse, captures outcomes for
+// timeout_ms, then sets the quitflag.
+//
+// scene_canonical_frame: frame from which the loaded state was saved
+// frame_offset:          disc frames after canonical to apply the input
+//                        (target frame = canonical + offset)
+// input_char:            'U' 'D' 'L' 'R' 'B' (BUTTON1) — or '\0' = no press
+//                        (just observe what the ROM does at that frame)
+// timeout_ms:            how long to record events after the input before
+//                        quitting (typical: 3000-5000 ms)
+//
+// Returns false if input_char is invalid.
+bool init_test_mode(uint32_t scene_canonical_frame,
+                    int32_t  frame_offset,
+                    char     input_char,
+                    uint32_t timeout_ms);
+
 bool is_active();
 
 // Drive the state machine — call once from lair::do_nmi().

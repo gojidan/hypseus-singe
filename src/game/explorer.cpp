@@ -370,7 +370,10 @@ enum State {
     START_PRESS,    // START1 held
     START_WAIT,     // START1 released, waiting for game to load
     PLAYING,        // move held — waiting for game over or stuck detection
-    GAMEOVER        // restarting: waiting before next coin insertion
+    GAMEOVER,       // restarting: waiting before next coin insertion
+    TEST_MODE_WAIT, // (save_state test) waiting for disc to reach target frame
+    TEST_MODE_HELD, // (save_state test) input held; counting timeout
+    TEST_MODE_DONE  // (save_state test) timeout elapsed; will quit on next tick
 };
 
 static bool     s_active      = false;
@@ -417,6 +420,14 @@ static int      s_pending_visit_idx = -1;
 // detector; GAMEOVER state will then call exit(0) instead of re-entering
 // ATTRACT, so each orchestrator-launched Hypseus terminates after one game.
 static bool     s_quit_after_gameover = false;
+
+// 2026-04-28: Test mode (frame-by-frame scan).
+static bool     s_test_mode          = false;
+static uint32_t s_test_target_frame  = 0;       // canonical + offset
+static uint32_t s_test_input_mask    = 0;       // 0 = no press, just observe
+static uint32_t s_test_timeout_ms    = 5000;
+static uint64_t s_test_input_nmi     = 0;       // NMI tick when input was applied
+static bool     s_test_input_done    = false;
 
 // Global-shift mask: list of (scene_frame, slot_idx_0based) pairs that force
 // the original offset (delta=0) during -marabelli<N> runs.  Used to bypass
@@ -561,6 +572,50 @@ bool init_guided_hard(int32_t delta_frames)
             SCENE_TABLE_HARD_COUNT);
     fflush(stderr);
     return ok;
+}
+
+// 2026-04-28: Test mode for frame-by-frame deterministic scan.
+// Used after -loadstate.  Skips BOOT/ATTRACT/COIN, goes straight to
+// TEST_MODE_WAIT, applies input at target frame, captures events for
+// timeout, then quits.
+bool init_test_mode(uint32_t scene_canonical_frame,
+                    int32_t  frame_offset,
+                    char     input_char,
+                    uint32_t timeout_ms)
+{
+    uint32_t mask = 0;
+    switch ((char)toupper((unsigned char)input_char)) {
+        case 'U': mask = MASK_U; break;
+        case 'L': mask = MASK_L; break;
+        case 'D': mask = MASK_D; break;
+        case 'R': mask = MASK_R; break;
+        case 'B': mask = MASK_B; break;
+        case 0:
+        case 'N':
+        case '\0':
+            mask = 0;  // observe without pressing
+            break;
+        default:
+            fprintf(stderr, "[test_mode] unknown input '%c'\n", input_char);
+            return false;
+    }
+
+    s_active             = true;
+    s_test_mode          = true;
+    s_test_target_frame  = scene_canonical_frame + frame_offset;
+    s_test_input_mask    = mask;
+    s_test_timeout_ms    = timeout_ms;
+    s_test_input_done    = false;
+    s_test_input_nmi     = 0;
+    // Skip BOOT/ATTRACT/COIN — go straight to test wait.
+    s_state              = TEST_MODE_WAIT;
+    s_state_nmi          = s_nmi;
+
+    fprintf(stderr, "[test_mode] armed: target=%u (scene=%u offset=%+d) input=%c (0x%x) timeout=%u ms\n",
+            s_test_target_frame, scene_canonical_frame, frame_offset,
+            input_char ? input_char : '-', mask, timeout_ms);
+    fflush(stderr);
+    return true;
 }
 
 bool init_scan(uint32_t frame, int slot, char input_char,
@@ -1042,6 +1097,61 @@ Action tick(uint32_t current_disc_frame)
             enter_state(ATTRACT);
         }
         break;
+
+    // ─── Test mode (frame-by-frame scan) ─────────────────────────────────
+    case TEST_MODE_WAIT:
+        // Wait for the disc to reach the target frame, then apply input.
+        if (current_disc_frame >= s_test_target_frame) {
+            if (s_test_input_mask != 0) {
+                action.press_mask = s_test_input_mask;
+                s_held_mask       = s_test_input_mask;
+                s_hold_end_nmi    = s_nmi + PULSE_PRESS;
+                fprintf(stderr, "[test_mode] applying input mask 0x%x at disc=%u (target=%u)\n",
+                        s_test_input_mask, current_disc_frame, s_test_target_frame);
+                fflush(stderr);
+            } else {
+                fprintf(stderr, "[test_mode] target reached at disc=%u — observing only (no press)\n",
+                        current_disc_frame);
+                fflush(stderr);
+            }
+            s_test_input_nmi = s_nmi;
+            s_test_input_done = true;
+            enter_state(TEST_MODE_HELD);
+        }
+        // Failsafe: if disc never reaches target (timeout 10 sec from state entry)
+        if (elapsed >= 10 * NMI_HZ) {
+            fprintf(stderr, "[test_mode] WAIT timeout — disc=%u never reached target=%u\n",
+                    current_disc_frame, s_test_target_frame);
+            fflush(stderr);
+            enter_state(TEST_MODE_DONE);
+        }
+        break;
+
+    case TEST_MODE_HELD:
+        // Release the input after PULSE_PRESS NMIs, then count timeout.
+        if (s_held_mask && s_nmi >= s_hold_end_nmi) {
+            action.release_mask = s_held_mask;
+            s_held_mask = 0;
+        }
+        // Count test timeout from when input was applied.
+        {
+            uint64_t elapsed_since_input_nmi = s_nmi - s_test_input_nmi;
+            uint64_t elapsed_since_input_ms = (elapsed_since_input_nmi * 1000) / NMI_HZ;
+            if (elapsed_since_input_ms >= s_test_timeout_ms) {
+                fprintf(stderr, "[test_mode] timeout %u ms elapsed — quitting\n",
+                        s_test_timeout_ms);
+                fflush(stderr);
+                enter_state(TEST_MODE_DONE);
+            }
+        }
+        break;
+
+    case TEST_MODE_DONE:
+        fprintf(stderr, "[test_mode] done — graceful quit\n");
+        fflush(stderr);
+        set_quitflag();
+        s_active = false;
+        return action;
     }
 
     return action;
