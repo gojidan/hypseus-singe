@@ -590,9 +590,8 @@ bool init_test_mode(uint32_t scene_canonical_frame,
         case 'D': mask = MASK_D; break;
         case 'R': mask = MASK_R; break;
         case 'B': mask = MASK_B; break;
-        case 0:
+        case '\0':  // same value as 0
         case 'N':
-        case '\0':
             mask = 0;  // observe without pressing
             break;
         default:
