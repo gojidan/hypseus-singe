@@ -45,6 +45,7 @@
 #include "ldp.h"
 #include "../game/rom_logger.h"
 #include "../game/explorer.h"
+#include "../save_state.h"
 #include <plog/Log.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -202,6 +203,14 @@ bool ldp::pre_search(const char *pszFrame, bool block_until_search_finishes)
     // Log scene jump: from where we were → where we're going
     rom_logger::log_search(m_last_seeked_frame, frame_number);
     explorer::on_search(m_last_seeked_frame, frame_number);
+
+    // 2026-04-28: save_state framework — if armed, save on matching search
+    extern game *g_game;
+    if (g_game) {
+        save_state::check_search_save(frame_number,
+                                       g_game->get_cpumem(),
+                                       g_game->get_cpumem_size());
+    }
 
     // notify us if we're still using outdated blocking searching
     if (block_until_search_finishes && m_bVerbose) s1 += " [blocking] ";

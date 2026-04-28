@@ -11,6 +11,7 @@
 
 #include "save_state.h"
 #include "cpu/m80_internal.h"  // for struct m80_context and extern g_context
+#include "hypseus.h"            // for set_quitflag()
 
 #include <stdio.h>
 #include <string.h>
@@ -20,6 +21,12 @@ extern struct m80_context g_context;
 namespace save_state {
 
 static const char MAGIC[8] = { 'H','Y','P','S','V','0','1','\0' };
+
+// Armed save-on-search state.
+static uint32_t s_armed_target_frame = 0;
+static char     s_armed_path[512]    = { 0 };
+static bool     s_armed_quit_after   = false;
+static bool     s_armed              = false;
 
 bool save(const char* filename,
           const uint8_t* cpumem,
@@ -93,6 +100,53 @@ fail:
     fclose(f);
     fprintf(stderr, "[save_state] load: read error on %s\n", filename);
     return false;
+}
+
+// ─── Triggered save-on-search ─────────────────────────────────────────────
+
+void arm_save_on_search(uint32_t target_frame, const char* path, bool quit_after_save)
+{
+    if (path == NULL || path[0] == '\0') {
+        s_armed = false;
+        s_armed_target_frame = 0;
+        s_armed_path[0] = '\0';
+        s_armed_quit_after = false;
+        return;
+    }
+    s_armed_target_frame = target_frame;
+    strncpy(s_armed_path, path, sizeof(s_armed_path) - 1);
+    s_armed_path[sizeof(s_armed_path) - 1] = '\0';
+    s_armed_quit_after = quit_after_save;
+    s_armed = true;
+    fprintf(stderr, "[save_state] armed: will save to '%s' on search to frame %u%s\n",
+            path, target_frame, quit_after_save ? " (then quit)" : "");
+    fflush(stderr);
+}
+
+bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpumem_size)
+{
+    if (!s_armed) return false;
+    if (search_to_frame != s_armed_target_frame) return false;
+    if (cpumem == NULL || cpumem_size == 0) {
+        fprintf(stderr, "[save_state] check_search_save: cpumem is NULL — skip\n");
+        return false;
+    }
+
+    fprintf(stderr, "[save_state] hit: search to %u matches armed target — saving\n",
+            search_to_frame);
+    fflush(stderr);
+
+    bool ok = save(s_armed_path, cpumem, cpumem_size, search_to_frame);
+
+    // Disarm so we don't save again if the frame is searched twice.
+    s_armed = false;
+
+    if (ok && s_armed_quit_after) {
+        fprintf(stderr, "[save_state] save complete — requesting graceful quit\n");
+        fflush(stderr);
+        set_quitflag();
+    }
+    return ok;
 }
 
 } // namespace save_state

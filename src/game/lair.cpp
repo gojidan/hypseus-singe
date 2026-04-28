@@ -53,6 +53,7 @@
 #include "../cpu/generic_z80.h"
 #include "rom_logger.h"
 #include "explorer.h"
+#include "../save_state.h"
 
 bool g_bUsbAnnunciator = false;
 bool g_bBootLog = true;
@@ -1064,6 +1065,22 @@ bool lair::handle_cmdline_arg(const char *arg)
         char     move  = (char)toupper((unsigned char)arg[9]);
         uint32_t delay = arg[10] != '\0' ? (uint32_t)atoi(arg + 10) : 0;
         bRes = explorer::init(move, delay);
+    } else if (strncasecmp(arg, "-savestate", 10) == 0) {
+        // 2026-04-28: save_state framework.
+        // Usage: -savestate FRAME:PATH
+        // Example: -savestate 1887:vestibule.bin
+        // When ROM seeks to FRAME, save Z80 + cpumem + frame to PATH and quit.
+        const char* p = arg + 10;
+        if (*p == ',' || *p == ':' || *p == '=') p++;
+        uint32_t frame = 0;
+        char path[400] = {0};
+        int n = sscanf(p, "%u:%399s", &frame, path);
+        if (n == 2 && frame > 0) {
+            save_state::arm_save_on_search(frame, path, /*quit_after_save=*/true);
+            bRes = true;
+        } else {
+            fprintf(stderr, "[savestate] usage: -savestate FRAME:PATH (e.g. -savestate 1887:vestibule.bin)\n");
+        }
     }
 
     return bRes;

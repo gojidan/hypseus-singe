@@ -29,4 +29,26 @@ bool load(const char* filename,
           uint32_t cpumem_size,
           uint32_t* out_disc_frame);
 
+
+// ─── Triggered save: arm a save-on-search ────────────────────────────────
+//
+// Call once at startup (e.g. from CLI flag handler).  When a subsequent
+// ldp::pre_search() seeks to `target_frame`, the save_state framework
+// dumps the current state to `path` and (optionally) sets the quitflag
+// so Hypseus terminates after the save.
+//
+// Pass NULL or "" to path to disarm.
+
+void arm_save_on_search(uint32_t target_frame,
+                        const char* path,
+                        bool quit_after_save);
+
+// Called by ldp::pre_search() with the search target frame.  If a save
+// has been armed and the frame matches, performs the save now.
+// `cpumem`, `cpumem_size`: passed from the active game (g_game).
+// Returns true if a save was performed.
+bool check_search_save(uint32_t search_to_frame,
+                       uint8_t* cpumem,
+                       uint32_t cpumem_size);
+
 } // namespace save_state

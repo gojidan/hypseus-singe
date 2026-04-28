@@ -126,6 +126,12 @@ class game
     // improperly)
     void save_sram();
 
+    // 2026-04-28: accessors for save_state framework.
+    // Returns pointer to the game's full cpumem buffer (ROM + RAM) and its size.
+    // Used by save_state::save() to dump full memory state.
+    Uint8* get_cpumem() { return m_cpumem; }
+    Uint32 get_cpumem_size() const { return cpu::MEM_SIZE; }
+
     virtual void shutdown();
     virtual void reset();
     virtual void do_irq(unsigned int);       // does an IRQ tick
