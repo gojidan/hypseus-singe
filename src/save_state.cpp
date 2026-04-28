@@ -28,6 +28,13 @@ static char     s_armed_path[512]    = { 0 };
 static bool     s_armed_quit_after   = false;
 static bool     s_armed              = false;
 
+// Armed load state.
+static char     s_load_path[512]      = { 0 };
+static bool     s_load_armed_flag     = false;
+static int32_t  s_test_frame_offset   = 0;
+static char     s_test_input          = '\0';
+static uint32_t s_test_timeout_ms     = 5000;
+
 bool save(const char* filename,
           const uint8_t* cpumem,
           uint32_t cpumem_size,
@@ -148,5 +155,51 @@ bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpume
     }
     return ok;
 }
+
+// ─── Triggered load ────────────────────────────────────────────────────────
+
+void arm_load(const char* filename,
+              int32_t test_frame_offset,
+              char test_input,
+              uint32_t test_timeout_ms)
+{
+    if (filename == NULL || filename[0] == '\0') {
+        s_load_armed_flag = false;
+        s_load_path[0] = '\0';
+        return;
+    }
+    strncpy(s_load_path, filename, sizeof(s_load_path) - 1);
+    s_load_path[sizeof(s_load_path) - 1] = '\0';
+    s_test_frame_offset = test_frame_offset;
+    s_test_input = test_input;
+    s_test_timeout_ms = test_timeout_ms;
+    s_load_armed_flag = true;
+    fprintf(stderr, "[save_state] load armed: file='%s' offset=%+d input='%c' timeout=%u ms\n",
+            filename, test_frame_offset,
+            test_input ? test_input : '-',
+            test_timeout_ms);
+    fflush(stderr);
+}
+
+bool is_load_armed()
+{
+    return s_load_armed_flag;
+}
+
+bool try_load_armed(uint8_t* cpumem, uint32_t cpumem_size, uint32_t* out_disc_frame)
+{
+    if (!s_load_armed_flag) return false;
+    if (cpumem == NULL || cpumem_size == 0) {
+        fprintf(stderr, "[save_state] try_load_armed: cpumem invalid\n");
+        return false;
+    }
+    bool ok = load(s_load_path, cpumem, cpumem_size, out_disc_frame);
+    s_load_armed_flag = false;  // disarm after consume
+    return ok;
+}
+
+int32_t  get_test_frame_offset() { return s_test_frame_offset; }
+char     get_test_input()        { return s_test_input; }
+uint32_t get_test_timeout_ms()   { return s_test_timeout_ms; }
 
 } // namespace save_state

@@ -869,6 +869,24 @@ bool lair::init()
         rom_logger::open(m_shortgamename, m_switchA, m_switchB);
     }
 
+    // 2026-04-28: save_state load — if -loadstate flag specified, load
+    // the state into m_cpumem (overwriting both ROM-loaded data and Z80
+    // context) and seek LDP to the saved disc frame.  ROM resumes from
+    // the saved scene immediately, skipping boot/attract/coin/start.
+    if (bResult && save_state::is_load_armed()) {
+        uint32_t saved_frame = 0;
+        if (save_state::try_load_armed(m_cpumem, cpu::MEM_SIZE, &saved_frame)) {
+            fprintf(stderr, "[lair] load_state restored — seeking LDP to frame %u\n", saved_frame);
+            fflush(stderr);
+            if (g_ldp) {
+                g_ldp->pre_search(saved_frame, true);
+            }
+        } else {
+            fprintf(stderr, "[lair] load_state FAILED — continuing with normal init\n");
+            fflush(stderr);
+        }
+    }
+
     return bResult;
 }
 
@@ -1080,6 +1098,43 @@ bool lair::handle_cmdline_arg(const char *arg)
             bRes = true;
         } else {
             fprintf(stderr, "[savestate] usage: -savestate FRAME:PATH (e.g. -savestate 1887:vestibule.bin)\n");
+        }
+    } else if (strncasecmp(arg, "-loadstate", 10) == 0) {
+        // 2026-04-28: save_state framework — LOAD side.
+        // Usage: -loadstate PATH[:OFFSET[:INPUT[:TIMEOUT_MS]]]
+        // Example basic: -loadstate vestibule.bin
+        //   -> loads state, ROM resumes from saved scene
+        // Example test:  -loadstate vestibule.bin:50:U:5000
+        //   -> loads state, applies UP at saved_frame+50, waits 5s, quits
+        const char* p = arg + 10;
+        if (*p == ',' || *p == ':' || *p == '=') p++;
+        char     path[400] = {0};
+        int      offset    = 0;
+        char     input     = '\0';
+        unsigned timeout   = 5000;
+        // Parse path (up to first ':')
+        int i = 0;
+        while (*p && *p != ':' && i < 399) { path[i++] = *p++; }
+        path[i] = '\0';
+        if (*p == ':') {
+            p++;
+            offset = atoi(p);
+            while (*p && *p != ':') p++;
+            if (*p == ':') {
+                p++;
+                input = (char)toupper((unsigned char)*p);
+                while (*p && *p != ':') p++;
+                if (*p == ':') {
+                    p++;
+                    timeout = (unsigned)atoi(p);
+                }
+            }
+        }
+        if (path[0]) {
+            save_state::arm_load(path, offset, input, timeout);
+            bRes = true;
+        } else {
+            fprintf(stderr, "[loadstate] usage: -loadstate PATH[:OFFSET[:INPUT[:TIMEOUT_MS]]]\n");
         }
     }
 

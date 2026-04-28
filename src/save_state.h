@@ -51,4 +51,42 @@ bool check_search_save(uint32_t search_to_frame,
                        uint8_t* cpumem,
                        uint32_t cpumem_size);
 
+
+// ─── Triggered load: arm a load-on-game-start ────────────────────────────
+//
+// Call once at startup (e.g. from CLI flag handler) to arm a load.
+// Then call try_load_armed() from the game's init/start routine — if
+// armed, it loads the state into the provided cpumem buffer and returns
+// the saved disc frame.  Caller must seek LDP to that frame.
+//
+// In test mode, additional parameters configure what to do after the load:
+//   test_frame_offset: how many disc frames after the saved frame to
+//                      apply the input
+//   test_input:        which input to send (UP/DOWN/LEFT/RIGHT/BUTTON1/NONE)
+//                      use '\0' to load without testing
+//   test_timeout_ms:   how long to wait after the input before quitting
+//
+// Pass NULL to filename to disarm.
+
+void arm_load(const char* filename,
+              int32_t test_frame_offset,
+              char test_input,
+              uint32_t test_timeout_ms);
+
+// True if a load has been armed.
+bool is_load_armed();
+
+// Try to perform the armed load.  cpumem must be at least cpumem_size bytes.
+// Returns true if loaded; out_disc_frame is set to the saved frame.
+// After this call, caller MUST issue ldp seek to *out_disc_frame.
+bool try_load_armed(uint8_t* cpumem,
+                    uint32_t cpumem_size,
+                    uint32_t* out_disc_frame);
+
+// Returns the test parameters from the armed load.
+// Useful for the bot/explorer to know what input to apply at what frame.
+int32_t  get_test_frame_offset();
+char     get_test_input();
+uint32_t get_test_timeout_ms();
+
 } // namespace save_state
