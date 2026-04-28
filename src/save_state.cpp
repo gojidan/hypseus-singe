@@ -10,7 +10,8 @@
 //       This is OK for our purposes (one machine producing & consuming).
 
 #include "save_state.h"
-#include "cpu/m80_internal.h"  // for struct m80_context and extern g_context
+#include "cpu/m80.h"            // for M80_REG_COUNT enum (used by m80_internal.h)
+#include "cpu/m80_internal.h"   // for struct m80_context and extern g_context
 #include "hypseus.h"            // for set_quitflag()
 
 #include <stdio.h>
