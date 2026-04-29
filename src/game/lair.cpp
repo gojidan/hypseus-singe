@@ -1095,10 +1095,63 @@ bool lair::handle_cmdline_arg(const char *arg)
         char     move  = (char)toupper((unsigned char)arg[9]);
         uint32_t delay = arg[10] != '\0' ? (uint32_t)atoi(arg + 10) : 0;
         bRes = explorer::init(move, delay);
+    } else if (strncasecmp(arg, "-savestatebatch", 15) == 0) {
+        // 2026-04-29: batch save state.
+        // Usage: -savestatebatchMANIFEST_FILE
+        // Manifest format: one line per save, "FRAME PATH"
+        //   1887 save_states/easy_scene_1887.bin
+        //   2353 save_states/easy_scene_2353.bin
+        //   ...
+        // Lines starting with '#' are ignored. One Hypseus run captures all
+        // listed scenes; quits after the LAST armed target has been consumed.
+        const char* p = arg + 15;
+        if (*p == ',' || *p == ':' || *p == '=') p++;
+        if (*p == '\0') {
+            fprintf(stderr, "[savestatebatch] usage: -savestatebatchMANIFEST_FILE\n");
+        } else {
+            FILE* mf = fopen(p, "r");
+            if (!mf) {
+                fprintf(stderr, "[savestatebatch] cannot open manifest '%s'\n", p);
+            } else {
+                char line[600];
+                int line_no = 0, added = 0;
+                // First pass: count valid entries so we can flag the LAST one
+                // with quit_after_save=true.
+                int total_valid = 0;
+                while (fgets(line, sizeof(line), mf)) {
+                    char* s = line;
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') continue;
+                    uint32_t frame = 0; char path[400] = {0};
+                    if (sscanf(s, "%u %399s", &frame, path) == 2 && frame > 0)
+                        total_valid++;
+                }
+                rewind(mf);
+                while (fgets(line, sizeof(line), mf)) {
+                    line_no++;
+                    char* s = line;
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') continue;
+                    uint32_t frame = 0; char path[400] = {0};
+                    if (sscanf(s, "%u %399s", &frame, path) == 2 && frame > 0) {
+                        added++;
+                        bool is_last = (added == total_valid);
+                        save_state::arm_save_on_search(frame, path,
+                                /*quit_after_save=*/is_last);
+                    } else {
+                        fprintf(stderr, "[savestatebatch] manifest line %d malformed, skipped: %s",
+                                line_no, line);
+                    }
+                }
+                fclose(mf);
+                fprintf(stderr, "[savestatebatch] armed %d save targets from '%s'\n", added, p);
+                bRes = (added > 0);
+            }
+        }
     } else if (strncasecmp(arg, "-savestate", 10) == 0) {
-        // 2026-04-28: save_state framework.
-        // Usage: -savestate FRAME:PATH
-        // Example: -savestate 1887:vestibule.bin
+        // 2026-04-28: save_state framework (single target).
+        // Usage: -savestateFRAME:PATH
+        // Example: -savestate1887:vestibule.bin
         // When ROM seeks to FRAME, save Z80 + cpumem + frame to PATH and quit.
         const char* p = arg + 10;
         if (*p == ',' || *p == ':' || *p == '=') p++;
@@ -1109,7 +1162,7 @@ bool lair::handle_cmdline_arg(const char *arg)
             save_state::arm_save_on_search(frame, path, /*quit_after_save=*/true);
             bRes = true;
         } else {
-            fprintf(stderr, "[savestate] usage: -savestate FRAME:PATH (e.g. -savestate 1887:vestibule.bin)\n");
+            fprintf(stderr, "[savestate] usage: -savestateFRAME:PATH (e.g. -savestate1887:vestibule.bin)\n");
         }
     } else if (strncasecmp(arg, "-loadstate", 10) == 0) {
         // 2026-04-28: save_state framework — LOAD side.

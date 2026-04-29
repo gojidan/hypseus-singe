@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <vector>
 
 extern struct m80_context g_context;
 
@@ -24,10 +25,14 @@ namespace save_state {
 static const char MAGIC[8] = { 'H','Y','P','S','V','0','1','\0' };
 
 // Armed save-on-search state.
-static uint32_t s_armed_target_frame = 0;
-static char     s_armed_path[512]    = { 0 };
-static bool     s_armed_quit_after   = false;
-static bool     s_armed              = false;
+// 2026-04-29: list of targets so a single Hypseus run can save many scenes
+// while the bot plays through the game.
+struct ArmedSave {
+    uint32_t target_frame;
+    char     path[512];
+};
+static std::vector<ArmedSave> s_armed_saves;
+static bool s_quit_when_all_saved = false;
 
 // Armed load state.
 static char     s_load_path[512]      = { 0 };
@@ -115,42 +120,57 @@ fail:
 void arm_save_on_search(uint32_t target_frame, const char* path, bool quit_after_save)
 {
     if (path == NULL || path[0] == '\0') {
-        s_armed = false;
-        s_armed_target_frame = 0;
-        s_armed_path[0] = '\0';
-        s_armed_quit_after = false;
+        // Disarm all targets.
+        s_armed_saves.clear();
+        s_quit_when_all_saved = false;
         return;
     }
-    s_armed_target_frame = target_frame;
-    strncpy(s_armed_path, path, sizeof(s_armed_path) - 1);
-    s_armed_path[sizeof(s_armed_path) - 1] = '\0';
-    s_armed_quit_after = quit_after_save;
-    s_armed = true;
-    fprintf(stderr, "[save_state] armed: will save to '%s' on search to frame %u%s\n",
-            path, target_frame, quit_after_save ? " (then quit)" : "");
+    ArmedSave a;
+    a.target_frame = target_frame;
+    strncpy(a.path, path, sizeof(a.path) - 1);
+    a.path[sizeof(a.path) - 1] = '\0';
+    s_armed_saves.push_back(a);
+    if (quit_after_save) s_quit_when_all_saved = true;  // sticky
+    fprintf(stderr, "[save_state] armed: frame %u -> '%s' (pending=%d, quit_when_empty=%s)\n",
+            target_frame, path, (int)s_armed_saves.size(),
+            s_quit_when_all_saved ? "yes" : "no");
     fflush(stderr);
 }
 
+bool has_armed_saves() { return !s_armed_saves.empty(); }
+int  armed_saves_pending() { return (int)s_armed_saves.size(); }
+
 bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpumem_size)
 {
-    if (!s_armed) return false;
-    if (search_to_frame != s_armed_target_frame) return false;
+    if (s_armed_saves.empty()) return false;
+
+    // Find a matching armed target.
+    int hit_idx = -1;
+    for (size_t i = 0; i < s_armed_saves.size(); ++i) {
+        if (s_armed_saves[i].target_frame == search_to_frame) {
+            hit_idx = (int)i;
+            break;
+        }
+    }
+    if (hit_idx < 0) return false;
+
     if (cpumem == NULL || cpumem_size == 0) {
         fprintf(stderr, "[save_state] check_search_save: cpumem is NULL — skip\n");
         return false;
     }
 
-    fprintf(stderr, "[save_state] hit: search to %u matches armed target — saving\n",
-            search_to_frame);
+    ArmedSave hit = s_armed_saves[hit_idx];  // copy before erase
+    fprintf(stderr, "[save_state] hit: frame %u matches armed target — saving to '%s' (remaining=%d)\n",
+            search_to_frame, hit.path, (int)s_armed_saves.size() - 1);
     fflush(stderr);
 
-    bool ok = save(s_armed_path, cpumem, cpumem_size, search_to_frame);
+    bool ok = save(hit.path, cpumem, cpumem_size, search_to_frame);
 
-    // Disarm so we don't save again if the frame is searched twice.
-    s_armed = false;
+    // Consume this target so a re-search to the same frame does not save again.
+    s_armed_saves.erase(s_armed_saves.begin() + hit_idx);
 
-    if (ok && s_armed_quit_after) {
-        fprintf(stderr, "[save_state] save complete — requesting graceful quit\n");
+    if (ok && s_quit_when_all_saved && s_armed_saves.empty()) {
+        fprintf(stderr, "[save_state] all armed targets consumed — requesting graceful quit\n");
         fflush(stderr);
         set_quitflag();
     }

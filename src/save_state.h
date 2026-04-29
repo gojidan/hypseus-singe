@@ -32,16 +32,29 @@ bool load(const char* filename,
 
 // ─── Triggered save: arm a save-on-search ────────────────────────────────
 //
-// Call once at startup (e.g. from CLI flag handler).  When a subsequent
-// ldp::pre_search() seeks to `target_frame`, the save_state framework
-// dumps the current state to `path` and (optionally) sets the quitflag
-// so Hypseus terminates after the save.
+// Call from CLI flag handler.  When a subsequent ldp::pre_search() seeks
+// to `target_frame`, the save_state framework dumps the current state
+// to `path`.
 //
-// Pass NULL or "" to path to disarm.
+// Multiple targets can be armed (one Hypseus run captures many scenes).
+// Each call appends to the armed-targets list.  Each target fires at
+// most once (consumed on first hit).
+//
+// quit_after_save: when true, Hypseus quits after the LAST armed target
+// has been consumed (i.e. when the list becomes empty).  Pass true on
+// the FINAL arm call of a batch — it is sticky once set.
+//
+// Pass NULL or "" to path to disarm ALL targets.
 
 void arm_save_on_search(uint32_t target_frame,
                         const char* path,
                         bool quit_after_save);
+
+// True if at least one save target is still armed (waiting to fire).
+bool has_armed_saves();
+
+// Number of armed save targets still waiting to fire.
+int  armed_saves_pending();
 
 // Called by ldp::pre_search() with the search target frame.  If a save
 // has been armed and the frame matches, performs the save now.
