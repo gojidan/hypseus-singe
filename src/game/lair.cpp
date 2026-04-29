@@ -898,6 +898,14 @@ bool lair::init()
                 char frame_str[16];
                 snprintf(frame_str, sizeof(frame_str), "%u", saved_frame);
                 g_ldp->pre_search(frame_str, true);
+                // 2026-04-29 sera: explicit play after seek so VLDP resumes
+                // forward playback.  Without this, slot 2+ saves leave VLDP
+                // paused at saved_frame because the ROM-natural "play forward"
+                // sequence was interrupted by our save (we saved mid-scene,
+                // not at a clean ROM-issued seek boundary like slot 1 entry).
+                g_ldp->pre_play();
+                fprintf(stderr, "[lair] load_state: VLDP play forced after seek\n");
+                fflush(stderr);
             }
             // If a test input was specified (-loadstate PATH:OFFSET:INPUT:TIMEOUT),
             // arm test mode in explorer: it will skip boot/attract, wait for the
