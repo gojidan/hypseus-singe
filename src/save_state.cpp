@@ -157,12 +157,29 @@ int  armed_saves_pending() { return (int)s_armed_saves.size(); }
 
 bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpumem_size)
 {
-    // Track scene context for after-accept matching, regardless of whether
-    // any entry-save target is currently armed.  Every search to a new
-    // frame resets the per-scene accept counter — the new frame becomes
-    // the scene anchor.
-    s_current_scene = search_to_frame;
-    s_accept_in_scene = 0;
+    // Track scene context for after-accept matching.  The anchor is only
+    // updated when the search target matches a scene we're tracking for
+    // slot 2+ purposes — this avoids spurious resets on intra-scene
+    // frame seeks (the ROM does many small pre_search calls during normal
+    // playback within a scene).
+    //
+    // 2026-04-29 design fix: previously we reset on every search, which
+    // meant the per-scene accept counter never advanced past 0 because
+    // every frame increment was a new "scene".
+    bool is_tracked_scene = false;
+    for (size_t i = 0; i < s_armed_after_accept.size(); ++i) {
+        if (s_armed_after_accept[i].scene_canonical == search_to_frame) {
+            is_tracked_scene = true;
+            break;
+        }
+    }
+    if (is_tracked_scene) {
+        s_current_scene = search_to_frame;
+        s_accept_in_scene = 0;
+        fprintf(stderr, "[save_state] scene anchor set: %u (accept counter reset)\n",
+                search_to_frame);
+        fflush(stderr);
+    }
 
     if (s_armed_saves.empty()) return false;
 
