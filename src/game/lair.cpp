@@ -530,6 +530,11 @@ void lair::do_nmi()
         if (expl.press_mask   & (1u << _s)) this->input_enable (_s, NOMOUSE);
         if (expl.release_mask & (1u << _s)) this->input_disable(_s, NOMOUSE);
     }
+
+    // 2026-04-29 sera: tick the save_state framework so any pending
+    // delayed-save (slot 2+ with delay_nmi > 0) can count down and fire.
+    save_state::tick_nmi(m_cpumem, cpu::MEM_SIZE,
+                         (uint32_t)g_ldp->get_current_frame());
 }
 
 void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
@@ -1127,21 +1132,36 @@ bool lair::handle_cmdline_arg(const char *arg)
             } else {
                 char line[600];
                 int line_no = 0, added = 0;
-                // Helper to classify a single line: returns 0=blank/comment,
-                // 1=entry "FRAME PATH", 2=after-accept "FRAME+N PATH",
-                // -1=malformed.
-                auto classify = [](const char* s, uint32_t* out_frame, int* out_count, char* out_path) -> int {
+                // Helper to classify a single line:
+                //   0 = blank/comment
+                //   1 = entry          "FRAME PATH"
+                //   2 = after-accept   "FRAME+N PATH"   (delay = 0)
+                //   3 = after-accept-delayed  "FRAME+N@DELAY PATH"
+                //  -1 = malformed
+                // out_count is the accept index; out_delay is NMI ticks
+                // to wait after the accept before saving.
+                auto classify = [](const char* s, uint32_t* out_frame, int* out_count,
+                                   int* out_delay, char* out_path) -> int {
                     while (*s == ' ' || *s == '\t') s++;
                     if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') return 0;
-                    // Try after-accept form first ("FRAME+N PATH")
-                    uint32_t f = 0; int n = 0; char path[400] = {0};
+                    uint32_t f = 0; int n = 0, d = 0; char path[400] = {0};
+                    // Try delayed after-accept form first ("FRAME+N@D PATH")
+                    if (sscanf(s, "%u+%d@%d %399s", &f, &n, &d, path) == 4
+                            && f > 0 && n > 0 && d >= 0) {
+                        *out_frame = f; *out_count = n; *out_delay = d;
+                        strcpy(out_path, path);
+                        return 3;
+                    }
+                    // After-accept form ("FRAME+N PATH")
                     if (sscanf(s, "%u+%d %399s", &f, &n, path) == 3 && f > 0 && n > 0) {
-                        *out_frame = f; *out_count = n; strcpy(out_path, path);
+                        *out_frame = f; *out_count = n; *out_delay = 0;
+                        strcpy(out_path, path);
                         return 2;
                     }
-                    // Fallback to entry form ("FRAME PATH")
+                    // Entry form ("FRAME PATH")
                     if (sscanf(s, "%u %399s", &f, path) == 2 && f > 0) {
-                        *out_frame = f; *out_count = 0; strcpy(out_path, path);
+                        *out_frame = f; *out_count = 0; *out_delay = 0;
+                        strcpy(out_path, path);
                         return 1;
                     }
                     return -1;
@@ -1151,15 +1171,15 @@ bool lair::handle_cmdline_arg(const char *arg)
                 // with quit_after_save=true.
                 int total_valid = 0;
                 while (fgets(line, sizeof(line), mf)) {
-                    uint32_t f; int n; char path[400];
-                    int c = classify(line, &f, &n, path);
-                    if (c == 1 || c == 2) total_valid++;
+                    uint32_t f; int n; int d; char path[400];
+                    int c = classify(line, &f, &n, &d, path);
+                    if (c == 1 || c == 2 || c == 3) total_valid++;
                 }
                 rewind(mf);
                 while (fgets(line, sizeof(line), mf)) {
                     line_no++;
-                    uint32_t f = 0; int n = 0; char path[400] = {0};
-                    int c = classify(line, &f, &n, path);
+                    uint32_t f = 0; int n = 0; int d = 0; char path[400] = {0};
+                    int c = classify(line, &f, &n, &d, path);
                     if (c == 0) continue;
                     if (c == -1) {
                         fprintf(stderr, "[savestatebatch] manifest line %d malformed, skipped: %s",
@@ -1171,9 +1191,10 @@ bool lair::handle_cmdline_arg(const char *arg)
                     if (c == 1) {
                         save_state::arm_save_on_search(f, path,
                                 /*quit_after_save=*/is_last);
-                    } else { // c == 2
+                    } else { // c == 2 (delay 0) or c == 3 (delay d)
                         save_state::arm_save_after_accept(f, n, path,
-                                /*quit_after_save=*/is_last);
+                                /*quit_after_save=*/is_last,
+                                /*delay_nmi=*/d);
                     }
                 }
                 fclose(mf);

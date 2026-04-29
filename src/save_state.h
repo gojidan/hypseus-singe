@@ -81,19 +81,37 @@ int  armed_saves_pending();
 //
 // quit_after_save semantics match arm_save_on_search (sticky once set).
 
+// 2026-04-29 sera: delay_nmi parameter — number of NMI ticks (40Hz) to
+// wait AFTER the accept emission before saving.  delay_nmi=0 saves
+// immediately at the accept beep (original behaviour).  delay_nmi=20
+// (~0.5s) lets the ROM enter the post-accept state (e.g. stagger) and
+// gives VLDP time to receive its commands, producing a "cleaner" save.
 void arm_save_after_accept(uint32_t scene_canonical,
                            int accept_count,
                            const char* path,
-                           bool quit_after_save);
+                           bool quit_after_save,
+                           int delay_nmi = 0);
 
 // Called by the per-game accept-detection hook (lair::write_ioport for
 // DL/SA) when ROM writes the "accept" beep trigger.  Updates the
-// per-scene accept counter and fires any armed save whose
+// per-scene accept counter and arms any armed save whose
 // (scene, count) now matches.
-// Returns true if a save was performed.
+//
+// 2026-04-29 sera: with delayed-save, the actual save() call is deferred
+// until tick_nmi() has counted down delay_nmi ticks.  This lets the ROM
+// finish the accept routine and enter the next state (e.g. stagger) so
+// VLDP receives its commands and the saved state is "clean".
+// Returns true if a save was triggered or armed for delayed-save.
 bool notify_accept(uint8_t* cpumem,
                    uint32_t cpumem_size,
                    uint32_t current_frame);
+
+// Called from the per-game NMI handler (lair::do_nmi for DL/SA) ~40Hz.
+// If a delayed save is pending, decrements its counter and performs the
+// save when it reaches 0.
+void tick_nmi(uint8_t* cpumem,
+              uint32_t cpumem_size,
+              uint32_t current_frame);
 
 // Called by ldp::pre_search() with the search target frame.  If a save
 // has been armed and the frame matches, performs the save now.

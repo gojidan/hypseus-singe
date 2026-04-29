@@ -39,6 +39,7 @@ static bool s_quit_when_all_saved = false;
 struct ArmedSaveAfterAccept {
     uint32_t scene_canonical;
     int      accept_count;   // 1-based: 1 = after 1st accept, 2 = after 2nd, ...
+    int      delay_nmi;      // NMI ticks to wait after the accept before saving
     char     path[512];
 };
 static std::vector<ArmedSaveAfterAccept> s_armed_after_accept;
@@ -48,6 +49,15 @@ static std::vector<ArmedSaveAfterAccept> s_armed_after_accept;
 // notify_accept (each accept increments).
 static uint32_t s_current_scene = 0;
 static int      s_accept_in_scene = 0;
+
+// Delayed-save: when an accept matches an armed (scene, count) entry with
+// delay_nmi > 0, instead of saving immediately we record the pending save
+// here and let tick_nmi() count it down.  Only one delayed save can be
+// pending at a time (the next accept overwrites — should not happen for
+// well-formed scans).
+static bool     s_pending_save_active   = false;
+static int      s_pending_save_remain   = 0;
+static char     s_pending_save_path[512] = { 0 };
 
 // Armed load state.
 static char     s_load_path[512]      = { 0 };
@@ -223,7 +233,8 @@ bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpume
 void arm_save_after_accept(uint32_t scene_canonical,
                            int accept_count,
                            const char* path,
-                           bool quit_after_save)
+                           bool quit_after_save,
+                           int delay_nmi)
 {
     if (path == NULL || path[0] == '\0') return;
     if (accept_count <= 0) {
@@ -231,15 +242,18 @@ void arm_save_after_accept(uint32_t scene_canonical,
                 accept_count);
         return;
     }
+    if (delay_nmi < 0) delay_nmi = 0;
     ArmedSaveAfterAccept a;
     a.scene_canonical = scene_canonical;
     a.accept_count = accept_count;
+    a.delay_nmi = delay_nmi;
     strncpy(a.path, path, sizeof(a.path) - 1);
     a.path[sizeof(a.path) - 1] = '\0';
     s_armed_after_accept.push_back(a);
     if (quit_after_save) s_quit_when_all_saved = true;
-    fprintf(stderr, "[save_state] armed: scene %u + %d accepts -> '%s' (after_accept_pending=%d)\n",
-            scene_canonical, accept_count, path, (int)s_armed_after_accept.size());
+    fprintf(stderr, "[save_state] armed: scene %u + %d accepts (delay=%d nmi) -> '%s' (after_accept_pending=%d)\n",
+            scene_canonical, accept_count, delay_nmi, path,
+            (int)s_armed_after_accept.size());
     fflush(stderr);
 }
 
@@ -265,22 +279,73 @@ bool notify_accept(uint8_t* cpumem, uint32_t cpumem_size, uint32_t current_frame
     }
 
     ArmedSaveAfterAccept hit = s_armed_after_accept[hit_idx];
-    fprintf(stderr, "[save_state] hit: scene %u, accept #%d at frame %u — saving to '%s' (remaining=%d)\n",
-            s_current_scene, s_accept_in_scene, current_frame, hit.path,
-            (int)s_armed_after_accept.size() - 1);
+
+    if (hit.delay_nmi == 0) {
+        // Immediate save (original behaviour).
+        fprintf(stderr, "[save_state] hit: scene %u, accept #%d at frame %u — saving to '%s' (remaining=%d)\n",
+                s_current_scene, s_accept_in_scene, current_frame, hit.path,
+                (int)s_armed_after_accept.size() - 1);
+        fflush(stderr);
+
+        bool ok = save(hit.path, cpumem, cpumem_size, current_frame);
+        s_armed_after_accept.erase(s_armed_after_accept.begin() + hit_idx);
+
+        if (ok && s_quit_when_all_saved
+               && s_armed_saves.empty()
+               && s_armed_after_accept.empty()
+               && !s_pending_save_active) {
+            fprintf(stderr, "[save_state] all armed targets consumed — requesting graceful quit\n");
+            fflush(stderr);
+            set_quitflag();
+        }
+        return ok;
+    }
+
+    // Delayed save: arm pending, let tick_nmi count it down.
+    if (s_pending_save_active) {
+        fprintf(stderr, "[save_state] WARN: delayed save already pending, overwriting (path=%s)\n",
+                s_pending_save_path);
+    }
+    s_pending_save_active = true;
+    s_pending_save_remain = hit.delay_nmi;
+    strncpy(s_pending_save_path, hit.path, sizeof(s_pending_save_path) - 1);
+    s_pending_save_path[sizeof(s_pending_save_path) - 1] = '\0';
+    fprintf(stderr, "[save_state] hit: scene %u, accept #%d at frame %u — DELAYED save in %d nmi ticks -> '%s'\n",
+            s_current_scene, s_accept_in_scene, current_frame,
+            hit.delay_nmi, hit.path);
     fflush(stderr);
 
-    bool ok = save(hit.path, cpumem, cpumem_size, current_frame);
+    // Remove from armed list NOW; the actual save will happen on tick.
     s_armed_after_accept.erase(s_armed_after_accept.begin() + hit_idx);
+    return true;
+}
+
+void tick_nmi(uint8_t* cpumem, uint32_t cpumem_size, uint32_t current_frame)
+{
+    if (!s_pending_save_active) return;
+    if (s_pending_save_remain > 0) {
+        s_pending_save_remain--;
+        return;
+    }
+    // Counter reached 0 — perform the save now.
+    if (cpumem == NULL || cpumem_size == 0) {
+        fprintf(stderr, "[save_state] tick_nmi: cpumem NULL, skipping pending save\n");
+        s_pending_save_active = false;
+        return;
+    }
+    fprintf(stderr, "[save_state] delayed save firing at frame %u -> '%s'\n",
+            current_frame, s_pending_save_path);
+    fflush(stderr);
+    bool ok = save(s_pending_save_path, cpumem, cpumem_size, current_frame);
+    s_pending_save_active = false;
 
     if (ok && s_quit_when_all_saved
            && s_armed_saves.empty()
            && s_armed_after_accept.empty()) {
-        fprintf(stderr, "[save_state] all armed targets consumed — requesting graceful quit\n");
+        fprintf(stderr, "[save_state] all armed targets consumed (after delayed save) — requesting graceful quit\n");
         fflush(stderr);
         set_quitflag();
     }
-    return ok;
 }
 
 // ─── Triggered load ────────────────────────────────────────────────────────
