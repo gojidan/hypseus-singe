@@ -1117,8 +1117,12 @@ Action tick(uint32_t current_disc_frame)
             s_test_input_done = true;
             enter_state(TEST_MODE_HELD);
         }
-        // Failsafe: if disc never reaches target (timeout 10 sec from state entry)
-        if (elapsed >= 10 * NMI_HZ) {
+        // Failsafe: if disc never reaches target.
+        // 2026-04-29: bumped 10*NMI_HZ -> 30*NMI_HZ. With -fastboot the NMI rate
+        // runs faster than 40Hz wall-clock, so 10*NMI_HZ fires in ~6.7s real time.
+        // Larger offsets (e.g. +63 from 1887 -> 1950 = 2.6s of disc) need more
+        // headroom to allow the post-load resume + seek to complete.
+        if (elapsed >= 30 * NMI_HZ) {
             fprintf(stderr, "[test_mode] WAIT timeout — disc=%u never reached target=%u\n",
                     current_disc_frame, s_test_target_frame);
             fflush(stderr);
