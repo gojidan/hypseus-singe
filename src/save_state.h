@@ -56,6 +56,45 @@ bool has_armed_saves();
 // Number of armed save targets still waiting to fire.
 int  armed_saves_pending();
 
+
+// ─── Triggered save: arm a save-after-N-accepts ─────────────────────────
+//
+// 2026-04-29: extension for multi-slot scenes (Singe = 12 moves in one
+// canonical, Tentacles, Three Caves, Socker Boppers, Elevator).
+//
+// When ROM searches to `scene_canonical` the framework starts counting
+// accept events from 0 in that scene.  When the Nth accept fires inside
+// that scene, the state is saved to `path` BEFORE returning from the
+// accept hook (so the saved disc frame is the frame at which the input
+// landed).  N=1 means "after the 1st accept", N=2 "after the 2nd", etc.
+//
+// IMPORTANT (2026-04-29 nota dell'utente): "accept" means the ROM
+// recognized the input, NOT that the move is correct.  An accept can
+// be followed by either:
+//   - a search to the next canonical scene (correct move)
+//   - a search to a death cinematic frame (accepted but wrong)
+// arm_save_after_accept fires on EVERY accept, so the loaded state may
+// represent an "accepted-but-wrong" branch.  In Phase 3 (analyze) we
+// distinguish the two by reading what the ROM searches to AFTER the
+// accept.  For multi-slot scanning purposes, only "accept + still in
+// scene" save states are useful — the analyzer must filter those.
+//
+// quit_after_save semantics match arm_save_on_search (sticky once set).
+
+void arm_save_after_accept(uint32_t scene_canonical,
+                           int accept_count,
+                           const char* path,
+                           bool quit_after_save);
+
+// Called by the per-game accept-detection hook (lair::write_ioport for
+// DL/SA) when ROM writes the "accept" beep trigger.  Updates the
+// per-scene accept counter and fires any armed save whose
+// (scene, count) now matches.
+// Returns true if a save was performed.
+bool notify_accept(uint8_t* cpumem,
+                   uint32_t cpumem_size,
+                   uint32_t current_frame);
+
 // Called by ldp::pre_search() with the search target frame.  If a save
 // has been armed and the frame matches, performs the save now.
 // `cpumem`, `cpumem_size`: passed from the active game (g_game).

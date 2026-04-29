@@ -34,6 +34,21 @@ struct ArmedSave {
 static std::vector<ArmedSave> s_armed_saves;
 static bool s_quit_when_all_saved = false;
 
+// Armed save-after-N-accepts (slot 2+ in multi-slot scenes).
+// 2026-04-29.
+struct ArmedSaveAfterAccept {
+    uint32_t scene_canonical;
+    int      accept_count;   // 1-based: 1 = after 1st accept, 2 = after 2nd, ...
+    char     path[512];
+};
+static std::vector<ArmedSaveAfterAccept> s_armed_after_accept;
+
+// Per-scene accept tracking: updated in check_search_save (every search
+// resets the counter and updates the current scene anchor) and in
+// notify_accept (each accept increments).
+static uint32_t s_current_scene = 0;
+static int      s_accept_in_scene = 0;
+
 // Armed load state.
 static char     s_load_path[512]      = { 0 };
 static bool     s_load_armed_flag     = false;
@@ -142,6 +157,13 @@ int  armed_saves_pending() { return (int)s_armed_saves.size(); }
 
 bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpumem_size)
 {
+    // Track scene context for after-accept matching, regardless of whether
+    // any entry-save target is currently armed.  Every search to a new
+    // frame resets the per-scene accept counter — the new frame becomes
+    // the scene anchor.
+    s_current_scene = search_to_frame;
+    s_accept_in_scene = 0;
+
     if (s_armed_saves.empty()) return false;
 
     // Find a matching armed target.
@@ -169,7 +191,74 @@ bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpume
     // Consume this target so a re-search to the same frame does not save again.
     s_armed_saves.erase(s_armed_saves.begin() + hit_idx);
 
-    if (ok && s_quit_when_all_saved && s_armed_saves.empty()) {
+    if (ok && s_quit_when_all_saved
+           && s_armed_saves.empty()
+           && s_armed_after_accept.empty()) {
+        fprintf(stderr, "[save_state] all armed targets consumed — requesting graceful quit\n");
+        fflush(stderr);
+        set_quitflag();
+    }
+    return ok;
+}
+
+// ─── Triggered save-after-N-accepts ────────────────────────────────────────
+
+void arm_save_after_accept(uint32_t scene_canonical,
+                           int accept_count,
+                           const char* path,
+                           bool quit_after_save)
+{
+    if (path == NULL || path[0] == '\0') return;
+    if (accept_count <= 0) {
+        fprintf(stderr, "[save_state] arm_save_after_accept: invalid count %d (must be >= 1)\n",
+                accept_count);
+        return;
+    }
+    ArmedSaveAfterAccept a;
+    a.scene_canonical = scene_canonical;
+    a.accept_count = accept_count;
+    strncpy(a.path, path, sizeof(a.path) - 1);
+    a.path[sizeof(a.path) - 1] = '\0';
+    s_armed_after_accept.push_back(a);
+    if (quit_after_save) s_quit_when_all_saved = true;
+    fprintf(stderr, "[save_state] armed: scene %u + %d accepts -> '%s' (after_accept_pending=%d)\n",
+            scene_canonical, accept_count, path, (int)s_armed_after_accept.size());
+    fflush(stderr);
+}
+
+bool notify_accept(uint8_t* cpumem, uint32_t cpumem_size, uint32_t current_frame)
+{
+    s_accept_in_scene++;
+    if (s_armed_after_accept.empty()) return false;
+
+    // Find a matching armed (scene, count) pair.
+    int hit_idx = -1;
+    for (size_t i = 0; i < s_armed_after_accept.size(); ++i) {
+        if (s_armed_after_accept[i].scene_canonical == s_current_scene &&
+            s_armed_after_accept[i].accept_count    == s_accept_in_scene) {
+            hit_idx = (int)i;
+            break;
+        }
+    }
+    if (hit_idx < 0) return false;
+
+    if (cpumem == NULL || cpumem_size == 0) {
+        fprintf(stderr, "[save_state] notify_accept: cpumem is NULL — skip\n");
+        return false;
+    }
+
+    ArmedSaveAfterAccept hit = s_armed_after_accept[hit_idx];
+    fprintf(stderr, "[save_state] hit: scene %u, accept #%d at frame %u — saving to '%s' (remaining=%d)\n",
+            s_current_scene, s_accept_in_scene, current_frame, hit.path,
+            (int)s_armed_after_accept.size() - 1);
+    fflush(stderr);
+
+    bool ok = save(hit.path, cpumem, cpumem_size, current_frame);
+    s_armed_after_accept.erase(s_armed_after_accept.begin() + hit_idx);
+
+    if (ok && s_quit_when_all_saved
+           && s_armed_saves.empty()
+           && s_armed_after_accept.empty()) {
         fprintf(stderr, "[save_state] all armed targets consumed — requesting graceful quit\n");
         fflush(stderr);
         set_quitflag();

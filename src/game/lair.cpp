@@ -565,6 +565,13 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
 
                     if (sound_name) {
                         rom_logger::log_sound(sound_name, g_ldp->get_current_frame());
+                        // 2026-04-29: notify save_state framework so it can fire
+                        // armed slot-2+ saves (multi-input scenes like Singe,
+                        // Tentacles, Three Caves, Socker Boppers, Elevator).
+                        if (sound_name[0] == 'a') {  // "accept"
+                            save_state::notify_accept(m_cpumem, cpu::MEM_SIZE,
+                                                      g_ldp->get_current_frame());
+                        }
                     }
 
                     if (m_prefer_samples) {
@@ -1102,6 +1109,11 @@ bool lair::handle_cmdline_arg(const char *arg)
         //   1887 save_states/easy_scene_1887.bin
         //   2353 save_states/easy_scene_2353.bin
         //   ...
+        // 2026-04-29: extended for slot 2+ via "FRAME+N PATH" syntax:
+        //   28938+1 save_states/dragon_slot2.bin   # save after 1st accept in scene 28938
+        //   28938+2 save_states/dragon_slot3.bin   # save after 2nd accept in scene 28938
+        //   1887+1  save_states/vestibule_slot2.bin # save after 1st accept in Vestibule
+        //
         // Lines starting with '#' are ignored. One Hypseus run captures all
         // listed scenes; quits after the LAST armed target has been consumed.
         const char* p = arg + 15;
@@ -1115,32 +1127,53 @@ bool lair::handle_cmdline_arg(const char *arg)
             } else {
                 char line[600];
                 int line_no = 0, added = 0;
+                // Helper to classify a single line: returns 0=blank/comment,
+                // 1=entry "FRAME PATH", 2=after-accept "FRAME+N PATH",
+                // -1=malformed.
+                auto classify = [](const char* s, uint32_t* out_frame, int* out_count, char* out_path) -> int {
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') return 0;
+                    // Try after-accept form first ("FRAME+N PATH")
+                    uint32_t f = 0; int n = 0; char path[400] = {0};
+                    if (sscanf(s, "%u+%d %399s", &f, &n, path) == 3 && f > 0 && n > 0) {
+                        *out_frame = f; *out_count = n; strcpy(out_path, path);
+                        return 2;
+                    }
+                    // Fallback to entry form ("FRAME PATH")
+                    if (sscanf(s, "%u %399s", &f, path) == 2 && f > 0) {
+                        *out_frame = f; *out_count = 0; strcpy(out_path, path);
+                        return 1;
+                    }
+                    return -1;
+                };
+
                 // First pass: count valid entries so we can flag the LAST one
                 // with quit_after_save=true.
                 int total_valid = 0;
                 while (fgets(line, sizeof(line), mf)) {
-                    char* s = line;
-                    while (*s == ' ' || *s == '\t') s++;
-                    if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') continue;
-                    uint32_t frame = 0; char path[400] = {0};
-                    if (sscanf(s, "%u %399s", &frame, path) == 2 && frame > 0)
-                        total_valid++;
+                    uint32_t f; int n; char path[400];
+                    int c = classify(line, &f, &n, path);
+                    if (c == 1 || c == 2) total_valid++;
                 }
                 rewind(mf);
                 while (fgets(line, sizeof(line), mf)) {
                     line_no++;
-                    char* s = line;
-                    while (*s == ' ' || *s == '\t') s++;
-                    if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') continue;
-                    uint32_t frame = 0; char path[400] = {0};
-                    if (sscanf(s, "%u %399s", &frame, path) == 2 && frame > 0) {
-                        added++;
-                        bool is_last = (added == total_valid);
-                        save_state::arm_save_on_search(frame, path,
-                                /*quit_after_save=*/is_last);
-                    } else {
+                    uint32_t f = 0; int n = 0; char path[400] = {0};
+                    int c = classify(line, &f, &n, path);
+                    if (c == 0) continue;
+                    if (c == -1) {
                         fprintf(stderr, "[savestatebatch] manifest line %d malformed, skipped: %s",
                                 line_no, line);
+                        continue;
+                    }
+                    added++;
+                    bool is_last = (added == total_valid);
+                    if (c == 1) {
+                        save_state::arm_save_on_search(f, path,
+                                /*quit_after_save=*/is_last);
+                    } else { // c == 2
+                        save_state::arm_save_after_accept(f, n, path,
+                                /*quit_after_save=*/is_last);
                     }
                 }
                 fclose(mf);
@@ -1177,8 +1210,15 @@ bool lair::handle_cmdline_arg(const char *arg)
         int      offset    = 0;
         char     input     = '\0';
         unsigned timeout   = 5000;
-        // Parse path (up to first ':')
+        // Parse path (up to first ':') — but tolerate a Windows drive
+        // letter at the start: "F:/path/file.bin:OFFSET:INPUT:TIMEOUT".
+        // 2026-04-29: bug discovered when the test runner passed absolute
+        // paths.  Without this, path was clipped at "F".
         int i = 0;
+        if (isalpha((unsigned char)p[0]) && p[1] == ':') {
+            path[i++] = *p++;  // drive letter
+            path[i++] = *p++;  // ':'
+        }
         while (*p && *p != ':' && i < 399) { path[i++] = *p++; }
         path[i] = '\0';
         if (*p == ':') {
