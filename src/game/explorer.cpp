@@ -429,6 +429,33 @@ static uint32_t s_test_timeout_ms    = 5000;
 static uint64_t s_test_input_nmi     = 0;       // NMI tick when input was applied
 static bool     s_test_input_done    = false;
 
+// 2026-04-30: Approach D — input chaining for slot 2+ scans.
+// When n_steps > 1, the test-mode state machine cycles WAIT -> HELD -> WAIT
+// for each step, advancing s_test_step_index.  Only the LAST step counts
+// the timeout_ms; intermediate steps just release the input then move to
+// the next WAIT.
+#define TEST_MAX_STEPS 16
+static uint32_t s_test_canonical     = 0;
+static int      s_test_step_count    = 0;
+static int      s_test_step_index    = 0;
+static int32_t  s_test_step_offsets[TEST_MAX_STEPS];
+static uint32_t s_test_step_masks[TEST_MAX_STEPS];
+static char     s_test_step_inputs[TEST_MAX_STEPS];
+
+static uint32_t input_char_to_mask(char c)
+{
+    switch ((char)toupper((unsigned char)c)) {
+        case 'U': return MASK_U;
+        case 'L': return MASK_L;
+        case 'D': return MASK_D;
+        case 'R': return MASK_R;
+        case 'B': return MASK_B;
+        case '\0':
+        case 'N': return 0;
+    }
+    return 0xFFFFFFFFu;  // sentinel for invalid
+}
+
 // Global-shift mask: list of (scene_frame, slot_idx_0based) pairs that force
 // the original offset (delta=0) during -marabelli<N> runs.  Used to bypass
 // already-characterised slots so later slots can be tested at extreme shifts.
@@ -583,36 +610,61 @@ bool init_test_mode(uint32_t scene_canonical_frame,
                     char     input_char,
                     uint32_t timeout_ms)
 {
-    uint32_t mask = 0;
-    switch ((char)toupper((unsigned char)input_char)) {
-        case 'U': mask = MASK_U; break;
-        case 'L': mask = MASK_L; break;
-        case 'D': mask = MASK_D; break;
-        case 'R': mask = MASK_R; break;
-        case 'B': mask = MASK_B; break;
-        case '\0':  // same value as 0
-        case 'N':
-            mask = 0;  // observe without pressing
-            break;
-        default:
-            fprintf(stderr, "[test_mode] unknown input '%c'\n", input_char);
+    // Single-step is just a chain of length 1.  Delegate.
+    TestStep step = { frame_offset, input_char };
+    return init_test_mode_chain(scene_canonical_frame, &step, 1, timeout_ms);
+}
+
+bool init_test_mode_chain(uint32_t scene_canonical_frame,
+                          const TestStep* steps,
+                          int n_steps,
+                          uint32_t timeout_ms)
+{
+    if (steps == NULL || n_steps <= 0) {
+        fprintf(stderr, "[test_mode] init_chain: no steps\n");
+        return false;
+    }
+    if (n_steps > TEST_MAX_STEPS) {
+        fprintf(stderr, "[test_mode] init_chain: too many steps (%d > %d)\n",
+                n_steps, TEST_MAX_STEPS);
+        return false;
+    }
+    // Validate every input first.
+    for (int i = 0; i < n_steps; ++i) {
+        uint32_t mask = input_char_to_mask(steps[i].input);
+        if (mask == 0xFFFFFFFFu) {
+            fprintf(stderr, "[test_mode] init_chain: step %d unknown input '%c'\n",
+                    i, steps[i].input);
             return false;
+        }
+        s_test_step_offsets[i] = steps[i].offset;
+        s_test_step_masks[i]   = mask;
+        s_test_step_inputs[i]  = (char)toupper((unsigned char)steps[i].input);
+        if (s_test_step_inputs[i] == '\0') s_test_step_inputs[i] = 'N';
     }
 
     s_active             = true;
     s_test_mode          = true;
-    s_test_target_frame  = scene_canonical_frame + frame_offset;
-    s_test_input_mask    = mask;
+    s_test_canonical     = scene_canonical_frame;
+    s_test_step_count    = n_steps;
+    s_test_step_index    = 0;
+    s_test_target_frame  = scene_canonical_frame + s_test_step_offsets[0];
+    s_test_input_mask    = s_test_step_masks[0];
     s_test_timeout_ms    = timeout_ms;
     s_test_input_done    = false;
     s_test_input_nmi     = 0;
-    // Skip BOOT/ATTRACT/COIN — go straight to test wait.
+    // Skip BOOT/ATTRACT/COIN — go straight to test wait of the first step.
     s_state              = TEST_MODE_WAIT;
     s_state_nmi          = s_nmi;
 
-    fprintf(stderr, "[test_mode] armed: target=%u (scene=%u offset=%+d) input=%c (0x%x) timeout=%u ms\n",
-            s_test_target_frame, scene_canonical_frame, frame_offset,
-            input_char ? input_char : '-', mask, timeout_ms);
+    fprintf(stderr, "[test_mode] CHAIN armed: scene=%u steps=%d timeout=%u ms\n",
+            scene_canonical_frame, n_steps, timeout_ms);
+    for (int i = 0; i < n_steps; ++i) {
+        fprintf(stderr, "[test_mode]   step %d: offset=%+d input=%c (target=%u)%s\n",
+                i, s_test_step_offsets[i], s_test_step_inputs[i],
+                scene_canonical_frame + s_test_step_offsets[i],
+                (i == n_steps - 1) ? "  [TEST]" : "  [SETUP]");
+    }
     fflush(stderr);
     return true;
 }
@@ -1131,12 +1183,32 @@ Action tick(uint32_t current_disc_frame)
         break;
 
     case TEST_MODE_HELD:
-        // Release the input after PULSE_PRESS NMIs, then count timeout.
+        // Release the input after PULSE_PRESS NMIs.
         if (s_held_mask && s_nmi >= s_hold_end_nmi) {
             action.release_mask = s_held_mask;
             s_held_mask = 0;
         }
-        // Count test timeout from when input was applied.
+        // 2026-04-30: chain support.
+        // After the input is released, decide: advance to next step (WAIT
+        // for the next target/input) or, if this was the LAST step, count
+        // the timeout_ms and quit.
+        if (s_test_step_index < s_test_step_count - 1 && s_held_mask == 0) {
+            // Advance to next step.
+            s_test_step_index++;
+            s_test_target_frame = s_test_canonical
+                                  + s_test_step_offsets[s_test_step_index];
+            s_test_input_mask   = s_test_step_masks[s_test_step_index];
+            s_test_input_done   = false;
+            s_test_input_nmi    = 0;
+            fprintf(stderr, "[test_mode] CHAIN advance to step %d/%d: target=%u input=%c\n",
+                    s_test_step_index + 1, s_test_step_count,
+                    s_test_target_frame,
+                    s_test_step_inputs[s_test_step_index]);
+            fflush(stderr);
+            enter_state(TEST_MODE_WAIT);
+            break;
+        }
+        // Last step — count test timeout from when LAST input was applied.
         {
             uint64_t elapsed_since_input_nmi = s_nmi - s_test_input_nmi;
             uint64_t elapsed_since_input_ms = (elapsed_since_input_nmi * 1000) / NMI_HZ;

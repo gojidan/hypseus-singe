@@ -899,11 +899,23 @@ bool lair::init()
                 snprintf(frame_str, sizeof(frame_str), "%u", saved_frame);
                 g_ldp->pre_search(frame_str, true);
             }
-            // If a test input was specified (-loadstate PATH:OFFSET:INPUT:TIMEOUT),
-            // arm test mode in explorer: it will skip boot/attract, wait for the
-            // target frame, apply the input, capture for timeout, then quit.
-            if (test_input != '\0' && test_input != '-') {
-                explorer::init_test_mode(saved_frame, test_offset, test_input, test_timeout);
+            // If test inputs were specified, arm test mode in explorer.
+            // 2026-04-30: chain support — multi-step (-loadstatechain) for
+            // slot 2+ scans via Approach D (chain correct slot 1..N-1
+            // inputs before the test input of slot N).  Single-step
+            // (-loadstate ...:OFFSET:INPUT:TIMEOUT) just arms a chain of 1.
+            int chain_count = save_state::get_test_chain_count();
+            if (chain_count > 0) {
+                if (chain_count == 1 && test_input != '\0' && test_input != '-') {
+                    explorer::init_test_mode(saved_frame, test_offset, test_input, test_timeout);
+                } else if (chain_count > 1) {
+                    explorer::TestStep steps[16];
+                    for (int i = 0; i < chain_count && i < 16; ++i) {
+                        steps[i].offset = save_state::get_test_chain_offset(i);
+                        steps[i].input  = save_state::get_test_chain_input(i);
+                    }
+                    explorer::init_test_mode_chain(saved_frame, steps, chain_count, test_timeout);
+                }
             }
         } else {
             fprintf(stderr, "[lair] load_state FAILED — continuing with normal init\n");
@@ -1217,6 +1229,69 @@ bool lair::handle_cmdline_arg(const char *arg)
             bRes = true;
         } else {
             fprintf(stderr, "[savestate] usage: -savestateFRAME:PATH (e.g. -savestate1887:vestibule.bin)\n");
+        }
+    } else if (strncasecmp(arg, "-loadstatechain", 15) == 0) {
+        // 2026-04-30: Approach D — chained input scan.
+        // Usage: -loadstatechainMANIFEST_FILE
+        // Manifest:
+        //   state_path: vestibule.bin
+        //   timeout_ms: 5000
+        //   step: 58 R    # setup: slot 1 correct input at offset 58
+        //   step: 110 R   # test:  apply R at offset 110 (= slot 2 test offset)
+        // Comments start with '#'.  Last `step:` is the test step.
+        const char* p = arg + 15;
+        if (*p == ',' || *p == ':' || *p == '=') p++;
+        if (*p == '\0') {
+            fprintf(stderr, "[loadstatechain] usage: -loadstatechainMANIFEST_FILE\n");
+        } else {
+            FILE* mf = fopen(p, "r");
+            if (!mf) {
+                fprintf(stderr, "[loadstatechain] cannot open manifest '%s'\n", p);
+            } else {
+                char line[600];
+                char state_path[400] = {0};
+                unsigned timeout_ms = 5000;
+                int32_t  offsets[16] = {0};
+                char     inputs[16]  = {0};
+                int      n_steps = 0;
+                while (fgets(line, sizeof(line), mf)) {
+                    char* s = line;
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') continue;
+                    // state_path: PATH
+                    char buf[400];
+                    if (sscanf(s, "state_path: %399s", buf) == 1 ||
+                        sscanf(s, "state_path:%399s",  buf) == 1) {
+                        strncpy(state_path, buf, sizeof(state_path) - 1);
+                        continue;
+                    }
+                    unsigned tms;
+                    if (sscanf(s, "timeout_ms: %u", &tms) == 1 ||
+                        sscanf(s, "timeout_ms:%u",  &tms) == 1) {
+                        timeout_ms = tms;
+                        continue;
+                    }
+                    int32_t off; char inp;
+                    if (sscanf(s, "step: %d %c", &off, &inp) == 2 ||
+                        sscanf(s, "step:%d %c",  &off, &inp) == 2) {
+                        if (n_steps < 16) {
+                            offsets[n_steps] = off;
+                            inputs[n_steps]  = (char)toupper((unsigned char)inp);
+                            n_steps++;
+                        }
+                        continue;
+                    }
+                }
+                fclose(mf);
+                if (state_path[0] == '\0' || n_steps == 0) {
+                    fprintf(stderr, "[loadstatechain] manifest invalid: state_path=%s n_steps=%d\n",
+                            state_path, n_steps);
+                } else {
+                    save_state::arm_load_chain(state_path, offsets, inputs,
+                                               n_steps, timeout_ms);
+                    bRes = true;
+                }
+            }
         }
     } else if (strncasecmp(arg, "-loadstate", 10) == 0) {
         // 2026-04-28: save_state framework — LOAD side.

@@ -93,6 +93,33 @@ bool init_test_mode(uint32_t scene_canonical_frame,
                     char     input_char,
                     uint32_t timeout_ms);
 
+// 2026-04-30: Approach D — input chaining for slot 2+ scans.
+// Instead of saving state at slot N entry (which has VLDP state issues),
+// we load slot 1 entry save and chain N-1 "correct" inputs of preceding
+// slots before applying the test input for slot N.  ROM transitions
+// naturally through slot 1 -> slot 2 -> ... in real time, no save/load
+// disruption.  VLDP plays cleanly because the load is at slot 1 entry
+// (the same point that worked at 99.94% match for slot 1 scan).
+//
+// scene_canonical_frame: the saved-state's canonical frame (e.g. 1887)
+// steps_offsets / steps_inputs / n_steps: list of (offset, input) pairs.
+//   Each step waits for disc to reach scene_canonical+offset, applies
+//   input, releases, advances to next step.  The LAST step is the
+//   "test step" — after it, we count timeout_ms and quit.
+// timeout_ms: how long to record events after the LAST input.
+//
+// For Vestibule slot 2 scan, n_steps=2:
+//   step[0] = (offset=58, input='R')   # slot 1 correct
+//   step[1] = (offset=110, input='X')  # slot 2 test
+struct TestStep {
+    int32_t offset;
+    char    input;
+};
+bool init_test_mode_chain(uint32_t scene_canonical_frame,
+                          const TestStep* steps,
+                          int n_steps,
+                          uint32_t timeout_ms);
+
 bool is_active();
 
 // Drive the state machine — call once from lair::do_nmi().

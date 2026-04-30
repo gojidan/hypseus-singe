@@ -159,4 +159,23 @@ int32_t  get_test_frame_offset();
 char     get_test_input();
 uint32_t get_test_timeout_ms();
 
+// 2026-04-30: Approach D — input chaining.
+// arm_load_chain stores N (offset, input) pairs.  The first N-1 are
+// "setup" steps that drive the ROM to slot N's listening state by
+// chaining the correct slot 1..N-1 inputs.  The N-th step is the
+// "test" step.  After it, capture timeout_ms and quit.
+//
+// max chain length: 16 (TEST_MAX_STEPS).
+void arm_load_chain(const char* filename,
+                    const int32_t* offsets,
+                    const char* inputs,
+                    int n_steps,
+                    uint32_t timeout_ms);
+
+// Number of chain steps (1 if armed via arm_load, N if via arm_load_chain).
+int     get_test_chain_count();
+// Per-step accessors (index 0..count-1).
+int32_t get_test_chain_offset(int index);
+char    get_test_chain_input(int index);
+
 } // namespace save_state

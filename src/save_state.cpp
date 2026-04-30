@@ -66,6 +66,14 @@ static int32_t  s_test_frame_offset   = 0;
 static char     s_test_input          = '\0';
 static uint32_t s_test_timeout_ms     = 5000;
 
+// 2026-04-30: chain test parameters (Approach D).  Stored as parallel
+// arrays for simplicity.  arm_load() populates a chain of length 1.
+// arm_load_chain() populates the full chain.
+#define SAVE_STATE_MAX_CHAIN 16
+static int      s_test_chain_count    = 0;
+static int32_t  s_test_chain_offsets[SAVE_STATE_MAX_CHAIN] = { 0 };
+static char     s_test_chain_inputs[SAVE_STATE_MAX_CHAIN]  = { 0 };
+
 bool save(const char* filename,
           const uint8_t* cpumem,
           uint32_t cpumem_size,
@@ -358,6 +366,7 @@ void arm_load(const char* filename,
     if (filename == NULL || filename[0] == '\0') {
         s_load_armed_flag = false;
         s_load_path[0] = '\0';
+        s_test_chain_count = 0;
         return;
     }
     strncpy(s_load_path, filename, sizeof(s_load_path) - 1);
@@ -365,11 +374,55 @@ void arm_load(const char* filename,
     s_test_frame_offset = test_frame_offset;
     s_test_input = test_input;
     s_test_timeout_ms = test_timeout_ms;
+    // Mirror to chain storage (chain of length 1).
+    s_test_chain_count = 1;
+    s_test_chain_offsets[0] = test_frame_offset;
+    s_test_chain_inputs[0]  = test_input;
     s_load_armed_flag = true;
     fprintf(stderr, "[save_state] load armed: file='%s' offset=%+d input='%c' timeout=%u ms\n",
             filename, test_frame_offset,
             test_input ? test_input : '-',
             test_timeout_ms);
+    fflush(stderr);
+}
+
+void arm_load_chain(const char* filename,
+                    const int32_t* offsets,
+                    const char* inputs,
+                    int n_steps,
+                    uint32_t timeout_ms)
+{
+    if (filename == NULL || filename[0] == '\0' || n_steps <= 0) {
+        s_load_armed_flag = false;
+        s_load_path[0] = '\0';
+        s_test_chain_count = 0;
+        return;
+    }
+    if (n_steps > SAVE_STATE_MAX_CHAIN) {
+        fprintf(stderr, "[save_state] arm_load_chain: too many steps %d (max %d)\n",
+                n_steps, SAVE_STATE_MAX_CHAIN);
+        return;
+    }
+    strncpy(s_load_path, filename, sizeof(s_load_path) - 1);
+    s_load_path[sizeof(s_load_path) - 1] = '\0';
+    s_test_timeout_ms = timeout_ms;
+    s_test_chain_count = n_steps;
+    for (int i = 0; i < n_steps; ++i) {
+        s_test_chain_offsets[i] = offsets[i];
+        s_test_chain_inputs[i]  = inputs[i];
+    }
+    // Last step is the "test step" — also expose via single-step getters
+    // for backward compatibility (some code paths only read the single one).
+    s_test_frame_offset = offsets[n_steps - 1];
+    s_test_input        = inputs[n_steps - 1];
+    s_load_armed_flag = true;
+    fprintf(stderr, "[save_state] load chain armed: file='%s' n_steps=%d timeout=%u ms\n",
+            filename, n_steps, timeout_ms);
+    for (int i = 0; i < n_steps; ++i) {
+        fprintf(stderr, "[save_state]   step %d: offset=%+d input='%c'%s\n",
+                i, offsets[i], inputs[i] ? inputs[i] : '-',
+                (i == n_steps - 1) ? "  [TEST]" : "  [SETUP]");
+    }
     fflush(stderr);
 }
 
@@ -393,5 +446,15 @@ bool try_load_armed(uint8_t* cpumem, uint32_t cpumem_size, uint32_t* out_disc_fr
 int32_t  get_test_frame_offset() { return s_test_frame_offset; }
 char     get_test_input()        { return s_test_input; }
 uint32_t get_test_timeout_ms()   { return s_test_timeout_ms; }
+
+int     get_test_chain_count() { return s_test_chain_count; }
+int32_t get_test_chain_offset(int i) {
+    if (i < 0 || i >= s_test_chain_count) return 0;
+    return s_test_chain_offsets[i];
+}
+char    get_test_chain_input(int i) {
+    if (i < 0 || i >= s_test_chain_count) return '\0';
+    return s_test_chain_inputs[i];
+}
 
 } // namespace save_state
