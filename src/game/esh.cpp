@@ -37,6 +37,7 @@
 #include <math.h> // for pow
 #include <plog/Log.h>
 #include "esh.h"
+#include "rom_logger.h"  // 2026-05-01: ROM logger NDJSON come per DL
 #include "../cpu/cpu.h"
 #include "../cpu/generic_z80.h"
 #include "../io/conout.h"
@@ -110,6 +111,18 @@ esh::esh() : m_needlineblink(false), m_needcharblink(false)
          {NULL}};
 
     m_rom_list = roms;
+}
+
+// 2026-05-01: override init() per aprire il ROM logger come fa DL.
+// Cattura: input enable/disable, sound beep, frame search via ldp.cpp,
+// e (preliminare) lives@0xE463.
+bool esh::init()
+{
+    bool result = game::init();
+    if (result) {
+        rom_logger::open(m_shortgamename, m_switchA, m_switchB);
+    }
+    return result;
 }
 
 void esh::set_version(int version)
@@ -260,6 +273,12 @@ void esh::cpu_mem_write(Uint16 addr, Uint8 value)
         m_video_overlay_needs_update = true;
     }
 
+    // 2026-05-01 ROM logger: lives counter at 0xE463 (per esh init: default 5).
+    // Log when value changes to track death cycle.
+    if (addr == 0xE463 && value != m_cpumem[addr]) {
+        rom_logger::log_lives(value, g_ldp->get_current_frame());
+    }
+
     m_cpumem[addr] = value;
 }
 
@@ -324,6 +343,9 @@ void esh::port_write(Uint16 port, Uint8 value)
                 lastbeep = 0;
                 sound::play(S_ESH_BEEP); // 1 sec. simulated beep, until the real
                                         // beep is sampled
+                // 2026-05-01: Esh's ROM has only ONE sound type (beep).
+                // Per DLP/Hypseus comments: "Coin/Extra life/high score beep"
+                rom_logger::log_sound("beep", g_ldp->get_current_frame());
             }
         }
         if (value & 0x08) {
@@ -517,6 +539,7 @@ void esh::patch_roms()
 // this gets called when the user presses a key or moves the joystick
 void esh::input_enable(Uint8 move, Sint8 mouseID)
 {
+    rom_logger::log_input_enable(move, g_ldp->get_current_frame());
     switch (move) {
     case SWITCH_UP:
         banks[1] &= ~0x01;
@@ -559,6 +582,7 @@ void esh::input_enable(Uint8 move, Sint8 mouseID)
 // center position
 void esh::input_disable(Uint8 move, Sint8 mouseID)
 {
+    rom_logger::log_input_disable(move, g_ldp->get_current_frame());
     switch (move) {
     case SWITCH_UP:
         banks[1] |= 0x01;

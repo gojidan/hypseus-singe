@@ -37,6 +37,7 @@ class esh : public game
 {
   public:
     esh();
+    bool init();                                  // 2026-05-01: override per aprire rom_logger
     void do_nmi();                                // does an NMI tick
     void do_irq(unsigned int);                    // does an IRQ tick
     void cpu_mem_write(Uint16 addr, Uint8 value); // memory write routine
