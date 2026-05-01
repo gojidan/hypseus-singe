@@ -116,11 +116,14 @@ esh::esh() : m_needlineblink(false), m_needcharblink(false)
 // 2026-05-01: override init() per aprire il ROM logger come fa DL.
 // Cattura: input enable/disable, sound beep, frame search via ldp.cpp,
 // e (preliminare) lives@0xE463.
+// NB: Esh's non ha m_switchA/m_switchB (Funai/Gakken hw, niente dipswitch
+// equivalente al Cinematronics di DL).  Passiamo 0/0 — i dipswitch reali di
+// Esh sono in banks[0] / banks[1] ma cambiano dinamicamente con gli input.
 bool esh::init()
 {
     bool result = game::init();
     if (result) {
-        rom_logger::open(m_shortgamename, m_switchA, m_switchB);
+        rom_logger::open(m_shortgamename, 0, 0);
     }
     return result;
 }
