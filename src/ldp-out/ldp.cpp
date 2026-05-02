@@ -202,6 +202,11 @@ bool ldp::pre_search(const char *pszFrame, bool block_until_search_finishes)
 
     // Log scene jump: from where we were → where we're going
     rom_logger::log_search(m_last_seeked_frame, frame_number);
+    // 2026-05-02 (task C): emit complete 6-pos score snapshot so the
+    // Python classifier has a full pre-input baseline. The ROM only writes
+    // digits that change, so without this, score_pre is incomplete and
+    // single-clean-state moves (e.g. Vestibule 4139 L+1) are misclassified.
+    rom_logger::log_score_snapshot_p2(frame_number);
     explorer::on_search(m_last_seeked_frame, frame_number);
 
     // 2026-04-28: save_state framework — if armed, save on matching search

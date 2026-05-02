@@ -20,6 +20,17 @@ namespace rom_logger {
 static FILE*   s_file    = nullptr;
 static uint32_t s_t0     = 0;      // SDL tick at session open (for relative ms)
 
+// 2026-05-02 (task C): cache the latest scoreboard digit values so we can
+// emit a complete snapshot on demand, even for digits that have not been
+// written by the ROM (which only writes digits that CHANGE).
+// p1 = LED scoreboard (lives/credits side), p2 = active player score.
+// 0xFF = "never seen" sentinel — treat as 0 in snapshot.
+static uint8_t s_score_cache[3][6] = {
+    {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  // player 0 (credits — only 2 pos used)
+    {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  // player 1 (LED scoreboard)
+    {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  // player 2 (active score)
+};
+
 // -------------------------------------------------------------------------
 // Move name lookup
 // These match the SWITCH_* enum order in src/io/input.h
@@ -162,10 +173,30 @@ void log_sound(const char* name, uint32_t frame)
 
 void log_score(uint8_t player, uint8_t pos, uint8_t digit, uint32_t frame)
 {
+    // Update cache (used by log_score_snapshot_p2).
+    if (player < 3 && pos < 6) {
+        s_score_cache[player][pos] = digit;
+    }
     if (!s_file) return;
     fprintf(s_file,
             "{\"e\":\"score\",\"p\":%u,\"pos\":%u,\"d\":%u,\"f\":%u,\"ms\":%u}\n",
             (unsigned)player, (unsigned)pos, (unsigned)digit, frame, elapsed_ms());
+    fflush(s_file);
+}
+
+void log_score_snapshot_p2(uint32_t frame)
+{
+    if (!s_file) return;
+    // Emit 6 score events with "snap":1 — one per pos.  Use cached value
+    // (or 0 for never-seen positions, since BCD digits init to 0 at boot).
+    uint32_t ms = elapsed_ms();
+    for (uint8_t pos = 0; pos < 6; ++pos) {
+        uint8_t d = s_score_cache[2][pos];
+        if (d == 0xFF) d = 0;
+        fprintf(s_file,
+                "{\"e\":\"score\",\"p\":2,\"pos\":%u,\"d\":%u,\"f\":%u,\"ms\":%u,\"snap\":1}\n",
+                (unsigned)pos, (unsigned)d, frame, ms);
+    }
     fflush(s_file);
 }
 

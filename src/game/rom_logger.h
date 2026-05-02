@@ -56,6 +56,21 @@ void log_sound(const char* name, uint32_t frame);
 // credits_pos = 0 (tens) or 1 (units) when player == 0.
 void log_score(uint8_t player, uint8_t pos, uint8_t digit, uint32_t frame);
 
+// 2026-05-02 (task C): emit a complete 6-pos snapshot of player 2's
+// scoreboard digits in a single batch.  Emitted as 6 score events with
+// "snap":1 attribute, distinct from regular per-digit updates.
+//
+// Why: the ROM only emits score writes for digits that CHANGE.  Digits
+// that remain stable between scenes have no event.  This means the Python
+// classifier's score_pre dict is incomplete for unchanged positions,
+// causing classifier ambiguity (4139 L+1 was the canonical edge case).
+//
+// The logger tracks the last-known value of every digit (cached from
+// log_score calls).  This snapshot dumps all 6 pos at the given frame so
+// the classifier has a complete pre-input baseline.  Trigger from lair.cpp
+// at scene entry (= after each search to a canonical frame).
+void log_score_snapshot_p2(uint32_t frame);
+
 // Space Ace skill level selected by the player (Ace/Captain/Cadet).
 // Emitted when the ROM writes 0xCC to the annunciator LED addresses.
 void log_skill(const char* skill, uint32_t frame);
