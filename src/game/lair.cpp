@@ -604,6 +604,10 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
             case 0xE000:
                 if (!m_prefer_samples)
                     sound::write_ctrl_data(m_soundchip_address_latch, Value, m_soundchip_id);
+                // 2026-05-02 (task #6.6): log raw sound chip writes for
+                // standalone runtime fidelity. value = AY-3-8910 register
+                // data, latched address from prior 0xE010 write.
+                rom_logger::log_io_write("sound", Addr, Value, g_ldp->get_current_frame());
                 break;
 
             // I believe this controlled whether the bus was in input or output
@@ -628,6 +632,9 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
                 default:
                     break;
                 }
+                // 2026-05-02 (task #6.6): log AY-3-8910 register address
+                // latch (paired with subsequent 0xE000 data write).
+                rom_logger::log_io_write("sound_addr", Addr, Value, g_ldp->get_current_frame());
                 break;
 
             // laserdisc control
@@ -637,6 +644,11 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
                 } else {
                     ldv1000::write(Value);
                 }
+                // 2026-05-02 (task #6.6): log raw LD command stream — these
+                // are the bytes the ROM sends to the LD-V1000/PR7820
+                // microcontroller. Phase 4b runtime needs these to drive
+                // a real Pioneer LD player on the cabinet.
+                rom_logger::log_io_write("ld", Addr, Value, g_ldp->get_current_frame());
                 break;
 
             // E030-E03F are all LED's on the Dragon's Lair scoreboard
@@ -742,9 +754,14 @@ void lair::cpu_mem_write(Uint16 Addr, Uint8 Value)
                 } else {
                     m_pScoreboard->update_player_lives(Value & 0x0F, 1);
                 }
+                // 2026-05-02 (task #6.6): log player 2 lives / LED clear writes.
+                rom_logger::log_io_write("lives_p2_or_led", Addr, Value, g_ldp->get_current_frame());
                 break;
             default: {
                 if (!g_bBootLog) return;
+                // 2026-05-02 (task #6.6): log unknown peripheral writes too —
+                // standalone runtime needs the complete byte stream.
+                rom_logger::log_io_write("unknown", Addr, Value, g_ldp->get_current_frame());
                 LOGW << fmt("Unknown hardware output at %x, value of %x, PC %x",
                         Addr, Value, Z80_GET_PC);
             } break;

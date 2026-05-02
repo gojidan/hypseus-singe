@@ -209,4 +209,13 @@ void log_skill(const char* skill, uint32_t frame)
     fflush(s_file);
 }
 
+void log_io_write(const char* tag, uint16_t addr, uint8_t value, uint32_t frame)
+{
+    if (!s_file) return;
+    fprintf(s_file,
+            "{\"e\":\"io\",\"tag\":\"%s\",\"a\":%u,\"v\":%u,\"f\":%u,\"ms\":%u}\n",
+            tag, (unsigned)addr, (unsigned)value, frame, elapsed_ms());
+    fflush(s_file);
+}
+
 } // namespace rom_logger

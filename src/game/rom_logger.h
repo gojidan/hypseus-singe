@@ -75,4 +75,15 @@ void log_score_snapshot_p2(uint32_t frame);
 // Emitted when the ROM writes 0xCC to the annunciator LED addresses.
 void log_skill(const char* skill, uint32_t frame);
 
+// 2026-05-02 (task #6.6): generic I/O write logger.
+// Captures EVERY write the ROM makes to a peripheral address — sound chip,
+// laserdisc commands, scoreboard LEDs, lives, credits, skill annunciator.
+// This is essential for the Phase 4b standalone runtime: only by replaying
+// the exact byte stream the ROM writes to its peripherals can a non-emulated
+// runtime reproduce the original cabinet's audio + LD + display behaviour.
+//
+// "tag" is a short semantic label (e.g. "sound", "ld", "score_p2", "lives").
+// Emitted as: {"e":"io","tag":"<tag>","a":<addr>,"v":<value>,"f":<frame>,"ms":<ms>}
+void log_io_write(const char* tag, uint16_t addr, uint8_t value, uint32_t frame);
+
 } // namespace rom_logger
