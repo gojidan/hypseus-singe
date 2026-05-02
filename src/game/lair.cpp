@@ -1232,12 +1232,19 @@ bool lair::handle_cmdline_arg(const char *arg)
         }
     } else if (strncasecmp(arg, "-loadstatechain", 15) == 0) {
         // 2026-04-30: Approach D — chained input scan.
+        // 2026-05-02 (task B-v2): optional save state after final chain step.
         // Usage: -loadstatechainMANIFEST_FILE
         // Manifest:
         //   state_path: vestibule.bin
         //   timeout_ms: 5000
         //   step: 58 R    # setup: slot 1 correct input at offset 58
         //   step: 110 R   # test:  apply R at offset 110 (= slot 2 test offset)
+        //   # Optional task B-v2 (cycle dispatcher experiment):
+        //   save_path: state_after_chain.bin
+        //   save_scene_canonical: 1887
+        //   save_after_accepts: 1
+        //   save_delay_nmi: 20
+        //   save_quit: 1
         // Comments start with '#'.  Last `step:` is the test step.
         const char* p = arg + 15;
         if (*p == ',' || *p == ':' || *p == '=') p++;
@@ -1254,6 +1261,12 @@ bool lair::handle_cmdline_arg(const char *arg)
                 int32_t  offsets[16] = {0};
                 char     inputs[16]  = {0};
                 int      n_steps = 0;
+                // 2026-05-02 task B-v2 — optional save-after-chain
+                char     save_path[400] = {0};
+                unsigned save_scene_canonical = 0;
+                unsigned save_after_accepts = 1;
+                unsigned save_delay_nmi = 0;
+                unsigned save_quit = 1;
                 while (fgets(line, sizeof(line), mf)) {
                     char* s = line;
                     while (*s == ' ' || *s == '\t') s++;
@@ -1281,6 +1294,33 @@ bool lair::handle_cmdline_arg(const char *arg)
                         }
                         continue;
                     }
+                    // 2026-05-02 task B-v2 keys
+                    if (sscanf(s, "save_path: %399s", buf) == 1 ||
+                        sscanf(s, "save_path:%399s",  buf) == 1) {
+                        strncpy(save_path, buf, sizeof(save_path) - 1);
+                        continue;
+                    }
+                    unsigned uval;
+                    if (sscanf(s, "save_scene_canonical: %u", &uval) == 1 ||
+                        sscanf(s, "save_scene_canonical:%u",  &uval) == 1) {
+                        save_scene_canonical = uval;
+                        continue;
+                    }
+                    if (sscanf(s, "save_after_accepts: %u", &uval) == 1 ||
+                        sscanf(s, "save_after_accepts:%u",  &uval) == 1) {
+                        save_after_accepts = uval;
+                        continue;
+                    }
+                    if (sscanf(s, "save_delay_nmi: %u", &uval) == 1 ||
+                        sscanf(s, "save_delay_nmi:%u",  &uval) == 1) {
+                        save_delay_nmi = uval;
+                        continue;
+                    }
+                    if (sscanf(s, "save_quit: %u", &uval) == 1 ||
+                        sscanf(s, "save_quit:%u",  &uval) == 1) {
+                        save_quit = uval;
+                        continue;
+                    }
                 }
                 fclose(mf);
                 if (state_path[0] == '\0' || n_steps == 0) {
@@ -1289,6 +1329,19 @@ bool lair::handle_cmdline_arg(const char *arg)
                 } else {
                     save_state::arm_load_chain(state_path, offsets, inputs,
                                                n_steps, timeout_ms);
+                    // 2026-05-02 task B-v2: arm save-after-accept if requested.
+                    if (save_path[0] != '\0' && save_scene_canonical != 0) {
+                        save_state::arm_save_after_accept(
+                            save_scene_canonical,
+                            (int)save_after_accepts,
+                            save_path,
+                            save_quit != 0,
+                            (int)save_delay_nmi);
+                        fprintf(stderr,
+                                "[loadstatechain] task B-v2 save armed: scene=%u accepts=%u delay_nmi=%u quit=%u path='%s'\n",
+                                save_scene_canonical, save_after_accepts,
+                                save_delay_nmi, save_quit, save_path);
+                    }
                     bRes = true;
                 }
             }
