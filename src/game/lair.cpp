@@ -1161,7 +1161,9 @@ bool lair::handle_cmdline_arg(const char *arg)
             } else {
                 char line[600];
                 int line_no = 0, added = 0;
-                // Helper to classify a single line:
+                // Helper to classify a single line — manual parse to avoid
+                // MingW sscanf quirks with negative %d after literal chars.
+                // Output:
                 //   0 = blank/comment
                 //   1 = entry          "FRAME PATH"
                 //   2 = after-accept   "FRAME+N PATH"   (delay = 0)
@@ -1171,36 +1173,54 @@ bool lair::handle_cmdline_arg(const char *arg)
                 //                        -1       = save at next search
                 //                                    complete (2026-05-03)
                 //  -1 = malformed
-                // out_count is the accept index; out_delay is NMI ticks
-                // to wait after the accept before saving (or -1 for
-                // save-at-next-search-complete mode).
                 auto classify = [](const char* s, uint32_t* out_frame, int* out_count,
                                    int* out_delay, char* out_path) -> int {
                     while (*s == ' ' || *s == '\t') s++;
                     if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') return 0;
-                    uint32_t f = 0; int n = 0, d = 0; char path[400] = {0};
-                    // Try delayed after-accept form ("FRAME+N@D PATH")
-                    // 2026-05-03: D can be negative (-1 = save at next
-                    // search complete; previously only positive was allowed)
-                    if (sscanf(s, "%u+%d@%d %399s", &f, &n, &d, path) == 4
-                            && f > 0 && n > 0 && (d >= 0 || d == -1)) {
-                        *out_frame = f; *out_count = n; *out_delay = d;
-                        strcpy(out_path, path);
-                        return 3;
+                    char* end = NULL;
+                    // Parse FRAME (unsigned)
+                    long f_long = strtol(s, &end, 10);
+                    if (end == s || f_long <= 0) return -1;
+                    s = end;
+                    int count = 0;
+                    int delay = 0;
+                    bool has_count = false;
+                    bool has_delay = false;
+                    // Optional "+N" for after-accept
+                    if (*s == '+') {
+                        s++;
+                        long n_long = strtol(s, &end, 10);
+                        if (end == s || n_long <= 0) return -1;
+                        count = (int)n_long;
+                        has_count = true;
+                        s = end;
+                        // Optional "@D" for delay (D can be negative or 0+)
+                        if (*s == '@') {
+                            s++;
+                            long d_long = strtol(s, &end, 10);
+                            if (end == s) return -1;
+                            delay = (int)d_long;
+                            has_delay = true;
+                            s = end;
+                        }
                     }
-                    // After-accept form ("FRAME+N PATH")
-                    if (sscanf(s, "%u+%d %399s", &f, &n, path) == 3 && f > 0 && n > 0) {
-                        *out_frame = f; *out_count = n; *out_delay = 0;
-                        strcpy(out_path, path);
-                        return 2;
+                    // Skip whitespace before path
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == '\0' || *s == '\n' || *s == '\r') return -1;
+                    // Read path until whitespace
+                    int i = 0;
+                    while (*s != '\0' && *s != '\n' && *s != '\r' &&
+                           *s != ' ' && *s != '\t' && i < 399) {
+                        out_path[i++] = *s++;
                     }
-                    // Entry form ("FRAME PATH")
-                    if (sscanf(s, "%u %399s", &f, path) == 2 && f > 0) {
-                        *out_frame = f; *out_count = 0; *out_delay = 0;
-                        strcpy(out_path, path);
-                        return 1;
-                    }
-                    return -1;
+                    out_path[i] = '\0';
+                    if (i == 0) return -1;
+                    *out_frame = (uint32_t)f_long;
+                    *out_count = count;
+                    *out_delay = delay;
+                    if (!has_count) return 1;        // entry form
+                    if (has_delay) return 3;         // after-accept@D (D may be -1)
+                    return 2;                        // after-accept simple
                 };
 
                 // First pass: count valid entries so we can flag the LAST one
