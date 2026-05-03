@@ -1218,9 +1218,11 @@ bool lair::handle_cmdline_arg(const char *arg)
                     *out_frame = (uint32_t)f_long;
                     *out_count = count;
                     *out_delay = delay;
-                    if (!has_count) return 1;        // entry form
-                    if (has_delay) return 3;         // after-accept@D (D may be -1)
-                    return 2;                        // after-accept simple
+                    int rv = !has_count ? 1 : (has_delay ? 3 : 2);
+                    fprintf(stderr, "[savestatebatch] DEBUG classify: frame=%lu count=%d has_count=%d delay=%d has_delay=%d path='%s' return=%d\n",
+                            f_long, count, (int)has_count, delay, (int)has_delay, out_path, rv);
+                    fflush(stderr);
+                    return rv;
                 };
 
                 // First pass: count valid entries so we can flag the LAST one
