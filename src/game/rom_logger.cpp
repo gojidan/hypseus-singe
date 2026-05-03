@@ -10,6 +10,12 @@
 #include <SDL.h>   // SDL_GetTicks()
 #include <stdio.h>
 #include <time.h>
+#ifdef _WIN32
+#include <process.h>  // _getpid
+#define getpid _getpid
+#else
+#include <unistd.h>   // getpid
+#endif
 
 namespace rom_logger {
 
@@ -73,15 +79,18 @@ void open(const char* game_name, uint8_t switchA, uint8_t switchB)
         s_file = nullptr;
     }
 
-    // Build filename:  lair_rom_log_20260415_143022.ndjson
+    // Build filename:  lair_rom_log_20260415_143022_pid12345.ndjson
+    // 2026-05-03: include PID to allow parallel hypseus instances writing
+    // to the same cwd without filename collisions.
     time_t now = time(nullptr);
     struct tm* t = localtime(&now);
     char filename[256];
     snprintf(filename, sizeof(filename),
-             "%s_rom_log_%04d%02d%02d_%02d%02d%02d.ndjson",
+             "%s_rom_log_%04d%02d%02d_%02d%02d%02d_pid%d.ndjson",
              game_name,
              t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
-             t->tm_hour, t->tm_min, t->tm_sec);
+             t->tm_hour, t->tm_min, t->tm_sec,
+             (int)getpid());
 
     s_file = fopen(filename, "w");
     if (!s_file) return;
