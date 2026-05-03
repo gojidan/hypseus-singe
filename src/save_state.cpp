@@ -65,7 +65,15 @@ static char     s_pending_save_path[512] = { 0 };
 // frame; tick_nmi monitors current_frame and saves when VLDP reaches it.
 static bool     s_save_at_search_active        = false;
 static uint32_t s_save_at_search_target_frame  = 0;  // 0 = not yet captured
+static uint32_t s_save_at_search_frame_at_accept = 0; // frame at the triggering accept beep
 static char     s_save_at_search_path[512]     = { 0 };
+
+// Minimum search jump (in frames) required to consider a pre_search the
+// "real" sub-state transition vs. an intra-scene small seek. The ROM may
+// emit small pre_search calls for housekeeping right after the accept;
+// only seeks of >= MIN_SEARCH_JUMP frames from the accept point count as
+// the genuine sub-state transition we want to align the save with.
+static const uint32_t SAVE_AT_SEARCH_MIN_JUMP = 50;
 
 // Armed load state.
 static char     s_load_path[512]      = { 0 };
@@ -208,16 +216,28 @@ bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpume
     }
 
     // 2026-05-03: capture next-search target for save-at-search-complete mode.
-    // If save-at-search is armed AND target_frame not yet captured, this is
-    // the first pre_search after the accept — lock in this frame as target.
+    // Need the search to be a "genuine sub-state transition", NOT a small
+    // intra-scene seek emitted by the ROM right after the accept (which
+    // would set the target = current frame and trigger an immediate save
+    // at the accept beep frame, defeating the purpose).
+    // Heuristic: target_frame must be at least SAVE_AT_SEARCH_MIN_JUMP
+    // frames away from the accept-trigger frame. For DL scenes, sub-state
+    // transitions are typically 80-200 frames past the accept point.
     if (s_save_at_search_active && s_save_at_search_target_frame == 0
         && search_to_frame != s_current_scene) {
-        // Skip the search to s_current_scene itself (= the accept-triggering
-        // search; we want the NEXT one which is the sub-state transition).
-        s_save_at_search_target_frame = search_to_frame;
-        fprintf(stderr, "[save_state] save-at-search target captured: frame %u (will save when VLDP arrives)\n",
-                search_to_frame);
-        fflush(stderr);
+        uint32_t jump = (search_to_frame > s_save_at_search_frame_at_accept)
+                        ? (search_to_frame - s_save_at_search_frame_at_accept)
+                        : (s_save_at_search_frame_at_accept - search_to_frame);
+        if (jump >= SAVE_AT_SEARCH_MIN_JUMP) {
+            s_save_at_search_target_frame = search_to_frame;
+            fprintf(stderr, "[save_state] save-at-search target captured: frame %u (jump %u from accept frame %u)\n",
+                    search_to_frame, jump, s_save_at_search_frame_at_accept);
+            fflush(stderr);
+        } else {
+            fprintf(stderr, "[save_state] save-at-search: ignoring small seek to %u (jump %u < %u, not the real sub-state)\n",
+                    search_to_frame, jump, SAVE_AT_SEARCH_MIN_JUMP);
+            fflush(stderr);
+        }
     }
 
     if (s_armed_saves.empty()) return false;
@@ -319,6 +339,7 @@ bool notify_accept(uint8_t* cpumem, uint32_t cpumem_size, uint32_t current_frame
         }
         s_save_at_search_active = true;
         s_save_at_search_target_frame = 0;  // captured at next pre_search
+        s_save_at_search_frame_at_accept = current_frame;
         strncpy(s_save_at_search_path, hit.path, sizeof(s_save_at_search_path) - 1);
         s_save_at_search_path[sizeof(s_save_at_search_path) - 1] = '\0';
         fprintf(stderr, "[save_state] hit: scene %u, accept #%d at frame %u — SAVE-AT-NEXT-SEARCH armed -> '%s'\n",
