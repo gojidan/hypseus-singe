@@ -291,7 +291,9 @@ void arm_save_after_accept(uint32_t scene_canonical,
                 accept_count);
         return;
     }
-    if (delay_nmi < 0) delay_nmi = 0;
+    // 2026-05-03: -1 is now a sentinel for "save at next search complete";
+    // negative values < -1 are still invalid → clamp to 0.
+    if (delay_nmi < -1) delay_nmi = 0;
     ArmedSaveAfterAccept a;
     a.scene_canonical = scene_canonical;
     a.accept_count = accept_count;
