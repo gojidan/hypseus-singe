@@ -1166,15 +1166,25 @@ bool lair::handle_cmdline_arg(const char *arg)
                 //   1 = entry          "FRAME PATH"
                 //   2 = after-accept   "FRAME+N PATH"   (delay = 0)
                 //   3 = after-accept-delayed  "FRAME+N@DELAY PATH"
+                //   4 = after-accept + save at next search (2026-05-03)
+                //                      "FRAME+N@search PATH"  (delay = -1)
                 //  -1 = malformed
                 // out_count is the accept index; out_delay is NMI ticks
-                // to wait after the accept before saving.
+                // to wait after the accept before saving (or -1 for
+                // save-at-next-search-complete mode).
                 auto classify = [](const char* s, uint32_t* out_frame, int* out_count,
                                    int* out_delay, char* out_path) -> int {
                     while (*s == ' ' || *s == '\t') s++;
                     if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') return 0;
                     uint32_t f = 0; int n = 0, d = 0; char path[400] = {0};
-                    // Try delayed after-accept form first ("FRAME+N@D PATH")
+                    // Try save-at-search form ("FRAME+N@search PATH")
+                    if (sscanf(s, "%u+%d@search %399s", &f, &n, path) == 3
+                            && f > 0 && n > 0) {
+                        *out_frame = f; *out_count = n; *out_delay = -1;
+                        strcpy(out_path, path);
+                        return 4;
+                    }
+                    // Try delayed after-accept form ("FRAME+N@D PATH")
                     if (sscanf(s, "%u+%d@%d %399s", &f, &n, &d, path) == 4
                             && f > 0 && n > 0 && d >= 0) {
                         *out_frame = f; *out_count = n; *out_delay = d;
@@ -1220,7 +1230,7 @@ bool lair::handle_cmdline_arg(const char *arg)
                     if (c == 1) {
                         save_state::arm_save_on_search(f, path,
                                 /*quit_after_save=*/is_last);
-                    } else { // c == 2 (delay 0) or c == 3 (delay d)
+                    } else { // c == 2 (delay 0) or c == 3 (delay d) or c == 4 (delay -1, save at search)
                         save_state::arm_save_after_accept(f, n, path,
                                 /*quit_after_save=*/is_last,
                                 /*delay_nmi=*/d);

@@ -59,6 +59,14 @@ static bool     s_pending_save_active   = false;
 static int      s_pending_save_remain   = 0;
 static char     s_pending_save_path[512] = { 0 };
 
+// 2026-05-03 pomeriggio: "save at next search complete" pending state.
+// When delay_nmi == -1 in arm_save_after_accept, we set this flag instead
+// of using s_pending_save_remain. The next pre_search captures the target
+// frame; tick_nmi monitors current_frame and saves when VLDP reaches it.
+static bool     s_save_at_search_active        = false;
+static uint32_t s_save_at_search_target_frame  = 0;  // 0 = not yet captured
+static char     s_save_at_search_path[512]     = { 0 };
+
 // Armed load state.
 static char     s_load_path[512]      = { 0 };
 static bool     s_load_armed_flag     = false;
@@ -199,6 +207,19 @@ bool check_search_save(uint32_t search_to_frame, uint8_t* cpumem, uint32_t cpume
         fflush(stderr);
     }
 
+    // 2026-05-03: capture next-search target for save-at-search-complete mode.
+    // If save-at-search is armed AND target_frame not yet captured, this is
+    // the first pre_search after the accept — lock in this frame as target.
+    if (s_save_at_search_active && s_save_at_search_target_frame == 0
+        && search_to_frame != s_current_scene) {
+        // Skip the search to s_current_scene itself (= the accept-triggering
+        // search; we want the NEXT one which is the sub-state transition).
+        s_save_at_search_target_frame = search_to_frame;
+        fprintf(stderr, "[save_state] save-at-search target captured: frame %u (will save when VLDP arrives)\n",
+                search_to_frame);
+        fflush(stderr);
+    }
+
     if (s_armed_saves.empty()) return false;
 
     // Find a matching armed target.
@@ -288,6 +309,25 @@ bool notify_accept(uint8_t* cpumem, uint32_t cpumem_size, uint32_t current_frame
 
     ArmedSaveAfterAccept hit = s_armed_after_accept[hit_idx];
 
+    if (hit.delay_nmi == -1) {
+        // 2026-05-03: "save at next search complete" mode.
+        // Set flag pending; next pre_search captures target frame; tick_nmi
+        // saves when VLDP arrives at that frame.
+        if (s_save_at_search_active) {
+            fprintf(stderr, "[save_state] WARN: save-at-search already pending, overwriting (path=%s)\n",
+                    s_save_at_search_path);
+        }
+        s_save_at_search_active = true;
+        s_save_at_search_target_frame = 0;  // captured at next pre_search
+        strncpy(s_save_at_search_path, hit.path, sizeof(s_save_at_search_path) - 1);
+        s_save_at_search_path[sizeof(s_save_at_search_path) - 1] = '\0';
+        fprintf(stderr, "[save_state] hit: scene %u, accept #%d at frame %u — SAVE-AT-NEXT-SEARCH armed -> '%s'\n",
+                s_current_scene, s_accept_in_scene, current_frame, hit.path);
+        fflush(stderr);
+        s_armed_after_accept.erase(s_armed_after_accept.begin() + hit_idx);
+        return true;
+    }
+
     if (hit.delay_nmi == 0) {
         // Immediate save (original behaviour).
         fprintf(stderr, "[save_state] hit: scene %u, accept #%d at frame %u — saving to '%s' (remaining=%d)\n",
@@ -330,6 +370,34 @@ bool notify_accept(uint8_t* cpumem, uint32_t cpumem_size, uint32_t current_frame
 
 void tick_nmi(uint8_t* cpumem, uint32_t cpumem_size, uint32_t current_frame)
 {
+    // 2026-05-03: save-at-search-complete mode. Triggered when VLDP reaches
+    // the captured target frame from the next pre_search after the accept.
+    if (s_save_at_search_active && s_save_at_search_target_frame > 0) {
+        if (current_frame >= s_save_at_search_target_frame) {
+            if (cpumem == NULL || cpumem_size == 0) {
+                fprintf(stderr, "[save_state] tick_nmi: cpumem NULL, skipping save-at-search\n");
+                s_save_at_search_active = false;
+                s_save_at_search_target_frame = 0;
+                return;
+            }
+            fprintf(stderr, "[save_state] save-at-search firing at frame %u (target was %u) -> '%s'\n",
+                    current_frame, s_save_at_search_target_frame, s_save_at_search_path);
+            fflush(stderr);
+            bool ok = save(s_save_at_search_path, cpumem, cpumem_size, current_frame);
+            s_save_at_search_active = false;
+            s_save_at_search_target_frame = 0;
+            if (ok && s_quit_when_all_saved
+                   && s_armed_saves.empty()
+                   && s_armed_after_accept.empty()
+                   && !s_pending_save_active) {
+                fprintf(stderr, "[save_state] all armed targets consumed (after save-at-search) — requesting graceful quit\n");
+                fflush(stderr);
+                set_quitflag();
+            }
+            return;
+        }
+    }
+
     if (!s_pending_save_active) return;
     if (s_pending_save_remain > 0) {
         s_pending_save_remain--;

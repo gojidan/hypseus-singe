@@ -86,6 +86,15 @@ int  armed_saves_pending();
 // immediately at the accept beep (original behaviour).  delay_nmi=20
 // (~0.5s) lets the ROM enter the post-accept state (e.g. stagger) and
 // gives VLDP time to receive its commands, producing a "cleaner" save.
+//
+// 2026-05-03 pomeriggio: SPECIAL VALUE delay_nmi == -1
+//   "save at next search complete".  When the ROM emits the next search
+//   to a sub-state frame (post-accept transition), wait for the VLDP to
+//   reach that target frame, THEN save.  This captures the TRUE "slot
+//   N+1 entry frame" auto-adaptively for any scene without hard-coded
+//   delay timing.  Robust to scenes with different sub-state frame
+//   distances (Vestibule = 2085 - 1958 = 127 frames; Fire Pit = 3693 -
+//   3601 = 92 frames; etc).
 void arm_save_after_accept(uint32_t scene_canonical,
                            int accept_count,
                            const char* path,
