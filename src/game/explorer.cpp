@@ -53,7 +53,7 @@ struct SceneInfo {
 
 static const SceneInfo SCENE_TABLE[] = {
     // Vestibule (small crumbling room)
-    { 1887,  2, {{MASK_R,   63}, {MASK_R,  100}}, "Vestibule" },
+    { 1887,  2, {{MASK_R,   71}, {MASK_R,  100}}, "Vestibule" },
 
     // Tentacles & Halberd
     { 2353,  6, {{MASK_B,   79}, {MASK_U,  140}, {MASK_R, 188},
@@ -66,7 +66,7 @@ static const SceneInfo SCENE_TABLE[] = {
     { 3561,  4, {{MASK_R,  108}, {MASK_R,  149}, {MASK_R, 197}, {MASK_R, 242}}, "Fire Pit" },
 
     // Yellow Brick Road
-    { 4139,  9, {{MASK_L,   36}, {MASK_U,   79}, {MASK_R, 135}, {MASK_U, 177},
+    { 4139,  9, {{MASK_L,   22}, {MASK_U,   79}, {MASK_R, 135}, {MASK_U, 177},
                  {MASK_L,  230}, {MASK_U,  283}, {MASK_B, 363}, {MASK_R, 400},
                  {MASK_U,  441}}, "Yellow Brick Road" },
 
@@ -79,7 +79,7 @@ static const SceneInfo SCENE_TABLE[] = {
     { 5683,  4, {{MASK_B,   66}, {MASK_R,  111}, {MASK_B, 163}, {MASK_U, 201}}, "Giddy Goons" },
 
     // YMCA Room (flattening stairs)
-    { 6375,  4, {{MASK_L,   49}, {MASK_B,  110}, {MASK_L, 143}, {MASK_L, 210}}, "YMCA Room" },
+    { 6375,  4, {{MASK_L,   53}, {MASK_B,  110}, {MASK_L, 143}, {MASK_L, 210}}, "YMCA Room" },
 
     // Forge (Smithee — smithee, row 6 col 1)
     // Verified: human run 20260420. Slot 5 B@374: bot fired at 368 (pre-window), missed.
@@ -94,7 +94,7 @@ static const SceneInfo SCENE_TABLE[] = {
     { 8709,  1, {{MASK_R,  185}}, "Breathing Door" },
 
     // Bower (bedroom / closing wall)
-    { 9181,  1, {{MASK_U,   6}}, "Bower" },
+    { 9181,  1, {{MASK_U,   14}}, "Bower" },
 
     // Fire Room (lightning / bench over exit)
     { 9529,  4, {{MASK_R,   78}, {MASK_L,  117}, {MASK_D, 165}, {MASK_L, 213}}, "Fire Room" },
@@ -108,17 +108,17 @@ static const SceneInfo SCENE_TABLE[] = {
                  {MASK_R,  259}, {MASK_L,  288}, {MASK_R, 314}, {MASK_B, 371}}, "Chapel" },
 
     // Mausoleum (Crypt Creeps)
-    { 11489, 6, {{MASK_U,   61}, {MASK_B,  103}, {MASK_U, 139},
+    { 11489, 6, {{MASK_U,   65}, {MASK_B,  103}, {MASK_U, 139},
                  {MASK_B,  181}, {MASK_L,  226}, {MASK_B, 262}}, "Mausoleum" },
 
     // Catwalk Bats (catwalk_bats — yellow_brick_road row 9 col 3)
-    { 12190, 5, {{MASK_U,   47}, {MASK_U,   76}, {MASK_B, 140},
+    { 12190, 5, {{MASK_U,   32}, {MASK_U,   76}, {MASK_B, 140},
                  {MASK_R,  177}, {MASK_R,  211}}, "Catwalk Bats" },
 
     // Fire Pit (reversed)
     // Slot 1 accept at disc 12835. Seq3 noseek window 27-44f from ~12837 = 12864-12881 (midpoint 12872 = +147).
     // Slots 3-4 recalculated from seq4/seq5 noseek starts; previous 156/203/248 were at window boundaries.
-    { 12725, 4, {{MASK_L,  110}, {MASK_L,  158}, {MASK_L, 206}, {MASK_L, 248}}, "Fire Pit Rev" },
+    { 12725, 4, {{MASK_L,  114}, {MASK_L,  158}, {MASK_L, 206}, {MASK_L, 248}}, "Fire Pit Rev" },
 
     // Yellow Brick Road (reversed)
     { 13303, 9, {{MASK_R,   41}, {MASK_U,   78}, {MASK_L, 132}, {MASK_U, 176},
@@ -238,7 +238,7 @@ static const int SCENE_TABLE_COUNT = (int)(sizeof(SCENE_TABLE) / sizeof(SCENE_TA
 //   - Many small offset shifts (1-15 frames)
 static const SceneInfo SCENE_TABLE_HARD[] = {
     // Vestibule Hard: slot 1 walkthrough "D R" (multi-input). Human played D more often.
-    { 1887,  2, {{MASK_D,   61}, {MASK_R,   98}}, "Vestibule" },
+    { 1887,  2, {{MASK_D,   72}, {MASK_R,   98}}, "Vestibule" },
     { 2353,  6, {{MASK_B,   77}, {MASK_U,  137}, {MASK_R, 184},
                  {MASK_D,  224}, {MASK_L,  291}, {MASK_U, 333}}, "Tentacles" },
     { 3097,  4, {{MASK_B,   61}, {MASK_B,   98}, {MASK_B, 141}, {MASK_U, 159}}, "Snake Room" },
