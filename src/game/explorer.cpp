@@ -53,7 +53,7 @@ struct SceneInfo {
 
 static const SceneInfo SCENE_TABLE[] = {
     // Vestibule (small crumbling room)
-    { 1887,  2, {{MASK_R,   71}, {MASK_R,  100}}, "Vestibule" },
+    { 1887,  2, {{MASK_R,   71}, {MASK_R,  104}}, "Vestibule" },
 
     // Tentacles & Halberd
     { 2353,  6, {{MASK_B,   79}, {MASK_U,  140}, {MASK_R, 188},
@@ -63,7 +63,7 @@ static const SceneInfo SCENE_TABLE[] = {
     { 3097,  4, {{MASK_B,   53}, {MASK_B,   98}, {MASK_B, 137}, {MASK_U, 159}}, "Snake Room" },
 
     // Fire Pit (ropes)
-    { 3561,  4, {{MASK_R,  108}, {MASK_R,  149}, {MASK_R, 197}, {MASK_R, 242}}, "Fire Pit" },
+    { 3561,  4, {{MASK_R,  108}, {MASK_R,  155}, {MASK_R, 200}, {MASK_R, 242}}, "Fire Pit" },
 
     // Yellow Brick Road
     { 4139,  9, {{MASK_L,   22}, {MASK_U,   79}, {MASK_R, 135}, {MASK_U, 177},
@@ -100,15 +100,15 @@ static const SceneInfo SCENE_TABLE[] = {
     { 9529,  4, {{MASK_R,   78}, {MASK_L,  117}, {MASK_D, 165}, {MASK_L, 213}}, "Fire Room" },
 
     // Flying Barding
-    { 10021, 6, {{MASK_R,   99}, {MASK_L,  132}, {MASK_R, 176}, {MASK_L, 223},
+    { 10021, 6, {{MASK_R,   99}, {MASK_L,  134}, {MASK_R, 179}, {MASK_L, 227},
                  {MASK_L,  271}, {MASK_L,  306}}, "Flying Barding" },
 
     // Chapel (Robot Knight / checkered floor)
-    { 10741, 8, {{MASK_R,   85}, {MASK_L,  123}, {MASK_U, 163}, {MASK_L, 213},
+    { 10741, 8, {{MASK_R,   85}, {MASK_L,  123}, {MASK_U, 164}, {MASK_L, 213},
                  {MASK_R,  259}, {MASK_L,  288}, {MASK_R, 314}, {MASK_B, 371}}, "Chapel" },
 
     // Mausoleum (Crypt Creeps)
-    { 11489, 6, {{MASK_U,   65}, {MASK_B,  103}, {MASK_U, 139},
+    { 11489, 6, {{MASK_U,   65}, {MASK_B,  103}, {MASK_U, 148},
                  {MASK_B,  181}, {MASK_L,  226}, {MASK_B, 262}}, "Mausoleum" },
 
     // Catwalk Bats (catwalk_bats — yellow_brick_road row 9 col 3)
@@ -238,7 +238,7 @@ static const int SCENE_TABLE_COUNT = (int)(sizeof(SCENE_TABLE) / sizeof(SCENE_TA
 //   - Many small offset shifts (1-15 frames)
 static const SceneInfo SCENE_TABLE_HARD[] = {
     // Vestibule Hard: slot 1 walkthrough "D R" (multi-input). Human played D more often.
-    { 1887,  2, {{MASK_D,   72}, {MASK_R,   98}}, "Vestibule" },
+    { 1887,  2, {{MASK_D,   72}, {MASK_R,  105}}, "Vestibule" },
     { 2353,  6, {{MASK_B,   77}, {MASK_U,  137}, {MASK_R, 184},
                  {MASK_D,  224}, {MASK_L,  291}, {MASK_U, 333}}, "Tentacles" },
     { 3097,  4, {{MASK_B,   61}, {MASK_B,   98}, {MASK_B, 141}, {MASK_U, 159}}, "Snake Room" },
