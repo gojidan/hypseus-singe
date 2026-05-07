@@ -109,7 +109,7 @@ static const SceneInfo SCENE_TABLE[] = {
 
     // Mausoleum (Crypt Creeps)
     { 11489, 6, {{MASK_U,   65}, {MASK_B,  103}, {MASK_U, 148},
-                 {MASK_B,  181}, {MASK_L,  226}, {MASK_B, 262}}, "Mausoleum" },
+                 {MASK_B,  184}, {MASK_L,  218}, {MASK_B, 262}}, "Mausoleum" },
 
     // Catwalk Bats (catwalk_bats — yellow_brick_road row 9 col 3)
     { 12190, 5, {{MASK_U,   32}, {MASK_U,   76}, {MASK_B, 140},
@@ -121,12 +121,12 @@ static const SceneInfo SCENE_TABLE[] = {
     { 12725, 4, {{MASK_L,  114}, {MASK_L,  158}, {MASK_L, 206}, {MASK_L, 248}}, "Fire Pit Rev" },
 
     // Yellow Brick Road (reversed)
-    { 13303, 9, {{MASK_R,   41}, {MASK_U,   78}, {MASK_L, 132}, {MASK_U, 176},
+    { 13303, 9, {{MASK_R,   22}, {MASK_U,   78}, {MASK_L, 132}, {MASK_U, 176},
                  {MASK_R,  225}, {MASK_U,  280}, {MASK_B, 363}, {MASK_L, 401},
                  {MASK_U,  444}}, "Yellow Brick Rev" },
 
     // Giant Bat
-    { 14327, 4, {{MASK_B,   17}, {MASK_L,   46}, {MASK_U, 104}, {MASK_B, 163}}, "Giant Bat" },
+    { 14327, 4, {{MASK_B,   12}, {MASK_L,   46}, {MASK_U, 104}, {MASK_B, 163}}, "Giant Bat" },
 
     // Elevator Floor (always 3-floor version at cycle position 4 — user 2026-04-24)
     // SINGLE input (L), 3 valid floor windows. Cluster analysis from shift sweep:
@@ -138,7 +138,7 @@ static const SceneInfo SCENE_TABLE[] = {
     { 14847, 1, {{MASK_L,  156}}, "Elevator" },
 
     // Forge Reversed (smithee_reversed — smithee row 6 col 2)
-    { 15653, 5, {{MASK_B,   54}, {MASK_B,  128}, {MASK_R, 169},
+    { 15653, 5, {{MASK_B,   64}, {MASK_B,  128}, {MASK_R, 169},
                  {MASK_B,  239}, {MASK_B,  376}}, "Forge Rev" },
 
     // Flying Barding (reversed)
@@ -152,7 +152,7 @@ static const SceneInfo SCENE_TABLE[] = {
     //   (N = none / optional slot that can be skipped)
     // Our table captures ONE valid path (user's play style). Full alternatives to be modelled
     // in runtime once we formalise multi-input and optional slots (post-windows phase).
-    { 17264,11, {{MASK_L,   43}, {MASK_R,  145}, {MASK_R, 234}, {MASK_R, 282},
+    { 17264,11, {{MASK_L,   31}, {MASK_R,  145}, {MASK_R, 234}, {MASK_R, 282},
                  {MASK_R,  398}, {MASK_R,  448}, {MASK_U, 488},
                  {MASK_B,  540}, {MASK_B,  572}, {MASK_B, 596},
                  {MASK_B,  641}}, "Pot of Gold" },
