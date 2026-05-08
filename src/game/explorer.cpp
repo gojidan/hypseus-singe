@@ -88,7 +88,7 @@ static const SceneInfo SCENE_TABLE[] = {
 
     // Socker Boppers (grim_reaper — row 5 col 3)
     // Verified: human run 20260420. B@221 buzzed (edge of window); B@230 is safe.
-    { 8004,  4, {{MASK_U,   77}, {MASK_B,  230}, {MASK_D, 281}, {MASK_U, 350}}, "Socker Boppers" },
+    { 8004,  4, {{MASK_U,   77}, {MASK_B,  225}, {MASK_D, 281}, {MASK_U, 350}}, "Socker Boppers" },
 
     // Breathing Door (wind room)
     { 8709,  1, {{MASK_R,  185}}, "Breathing Door" },
@@ -118,7 +118,7 @@ static const SceneInfo SCENE_TABLE[] = {
     // Fire Pit (reversed)
     // Slot 1 accept at disc 12835. Seq3 noseek window 27-44f from ~12837 = 12864-12881 (midpoint 12872 = +147).
     // Slots 3-4 recalculated from seq4/seq5 noseek starts; previous 156/203/248 were at window boundaries.
-    { 12725, 4, {{MASK_L,  114}, {MASK_L,  158}, {MASK_L, 206}, {MASK_L, 248}}, "Fire Pit Rev" },
+    { 12725, 4, {{MASK_L,  114}, {MASK_L,  163}, {MASK_L, 206}, {MASK_L, 248}}, "Fire Pit Rev" },
 
     // Yellow Brick Road (reversed)
     { 13303, 9, {{MASK_R,   22}, {MASK_U,   78}, {MASK_L, 132}, {MASK_U, 176},
@@ -142,7 +142,7 @@ static const SceneInfo SCENE_TABLE[] = {
                  {MASK_B,  239}, {MASK_B,  376}}, "Forge Rev" },
 
     // Flying Barding (reversed)
-    { 16544, 6, {{MASK_L,   95}, {MASK_R,  132}, {MASK_L, 173}, {MASK_R, 222},
+    { 16544, 6, {{MASK_L,   99}, {MASK_R,  132}, {MASK_L, 173}, {MASK_R, 222},
                  {MASK_R,  268}, {MASK_R,  303}}, "Flying Barding Rev" },
 
     // Pot of Gold (Lizard King)
