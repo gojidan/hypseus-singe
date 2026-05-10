@@ -158,12 +158,14 @@ static const SceneInfo SCENE_TABLE[] = {
                  {MASK_B,  641}}, "Pot of Gold" },
 
     // Wizard's Kitchen (Drink Me)
-    { 18282, 1, {{MASK_R,   32}}, "Wizard Kitchen" },
+    // 2026-05-10: re-centered slot 1 R from 32 to 25 (cluster [1,49], delta +7).
+    { 18282, 1, {{MASK_R,   25}}, "Wizard Kitchen" },
 
     // Mausoleum (reversed)
     // Sequence confirmed by user 2026-04-24: U B U B R B (6 slots, mirrors non-rev Mausoleum).
     // Removed phantom duplicate U@72 that was mis-identified as slot 2 from a sub-seek event.
-    { 18662, 6, {{MASK_U,   68}, {MASK_B, 101}, {MASK_U, 137},
+    // 2026-05-10: re-centered slot 1 U from 68 to 71 (cluster [60,83], delta -3).
+    { 18662, 6, {{MASK_U,   71}, {MASK_B, 101}, {MASK_U, 137},
                  {MASK_B,  179}, {MASK_R, 218}, {MASK_B, 261}}, "Mausoleum Rev" },
 
     // Socker Boppers (reversed) / grim_reaper_reversed
@@ -193,7 +195,8 @@ static const SceneInfo SCENE_TABLE[] = {
     { 21959, 1, {{MASK_R,  155}}, "Elevator Rev" },
 
     // Pirates of the Caribbean
-    { 22936,13, {{MASK_L,   16}, {MASK_R,   56}, {MASK_L, 105}, {MASK_R, 151},
+    // 2026-05-10: re-centered slot 1 L from 16 to 12 (cluster [1,23], delta +4).
+    { 22936,13, {{MASK_L,   12}, {MASK_R,   56}, {MASK_L, 105}, {MASK_R, 151},
                  {MASK_U,  280}, {MASK_U,  344}, {MASK_U, 405}, {MASK_U, 471},
                  {MASK_R,  596}, {MASK_L,  671}, {MASK_R, 735}, {MASK_L, 797},
                  {MASK_R,  913}}, "Pirates" },
@@ -202,7 +205,8 @@ static const SceneInfo SCENE_TABLE[] = {
     // Slot 7 U@442 fired at disc 24820 = ~60f into seq8, but landed in death zone boundary.
     // seq8 UP success window is 46-63f from start (~24762); fixed to U@436 = disc 24814 = ~52f.
     // ROM-verified 20260423: slot 7 window disc 24809-24837 (W=28), center offset 445.
-    { 24378, 9, {{MASK_B,  128}, {MASK_U,  217}, {MASK_U, 248}, {MASK_U, 302},
+    // 2026-05-10: re-centered slot 1 B from 128 to 119 (cluster [96,143], delta +9).
+    { 24378, 9, {{MASK_B,  119}, {MASK_U,  217}, {MASK_U, 248}, {MASK_U, 302},
                  {MASK_U,  335}, {MASK_U,  382}, {MASK_U, 445}, {MASK_U, 500},
                  {MASK_U,  620}}, "Mudmen" },
 
