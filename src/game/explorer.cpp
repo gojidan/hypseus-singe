@@ -1176,9 +1176,12 @@ Action tick(uint32_t current_disc_frame)
         // Failsafe: if disc never reaches target.
         // 2026-04-29: bumped 10*NMI_HZ -> 30*NMI_HZ. With -fastboot the NMI rate
         // runs faster than 40Hz wall-clock, so 10*NMI_HZ fires in ~6.7s real time.
-        // Larger offsets (e.g. +63 from 1887 -> 1950 = 2.6s of disc) need more
-        // headroom to allow the post-load resume + seek to complete.
-        if (elapsed >= 30 * NMI_HZ) {
+        // 2026-05-23: bumped 30 -> 600 NMI_HZ. DL Final scene has a 22-second gap
+        // between move 3 and move 4 (the princess speech). Chain test for move 4
+        // needs to wait up to ~40s wall for the disc to reach target. With ~225
+        // NMI/sec under -fastboot, 600 NMI_HZ ≈ 160s wall — generous safety net
+        // for long noseek sequences (Pirates whirlpools, DL Final princess gap, SA).
+        if (elapsed >= 600 * NMI_HZ) {
             fprintf(stderr, "[test_mode] WAIT timeout — disc=%u never reached target=%u\n",
                     current_disc_frame, s_test_target_frame);
             fflush(stderr);
