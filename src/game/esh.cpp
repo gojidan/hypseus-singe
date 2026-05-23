@@ -38,6 +38,7 @@
 #include <plog/Log.h>
 #include "esh.h"
 #include "rom_logger.h"  // 2026-05-01: ROM logger NDJSON come per DL
+#include "../save_state.h"  // 2026-05-23: -savestatebatch per cattura batch
 #include "../cpu/cpu.h"
 #include "../cpu/generic_z80.h"
 #include "../io/conout.h"
@@ -622,4 +623,87 @@ void esh::input_disable(Uint8 move, Sint8 mouseID)
         LOGD << "bug in move disable";
         break;
     }
+}
+
+// 2026-05-23: -savestatebatch — portato da lair.cpp.
+// save_state::check_search_save() è già chiamato globalmente da ldp::pre_seek(),
+// quindi serve solo il parsing del flag CLI per armare i target.
+//
+// Per Esh's usiamo SOLO la entry form "FRAME PATH" (after-accept richiederebbe
+// hook su accept beep che non è cablato per Esh). Le altre forme (FRAME+N,
+// FRAME+N@DELAY) restano disponibili in caso servano in futuro.
+bool esh::handle_cmdline_arg(const char *arg)
+{
+    bool bRes = false;
+    if (strncasecmp(arg, "-savestatebatch", 15) == 0) {
+        // Usage: -savestatebatchMANIFEST_FILE  (separatori , : = accettati)
+        // Manifest format: one line per save, "FRAME PATH"
+        //   3387 save_states/esh/easy_scene_3387.bin
+        //   5120 save_states/esh/easy_scene_5120.bin
+        //   ...
+        // Lines starting with '#' are ignored.  One Hypseus run captures all
+        // listed scenes; quits after the LAST armed target has been consumed.
+        const char* p = arg + 15;
+        if (*p == ',' || *p == ':' || *p == '=') p++;
+        if (*p == '\0') {
+            fprintf(stderr, "[savestatebatch] usage: -savestatebatchMANIFEST_FILE\n");
+        } else {
+            FILE* mf = fopen(p, "r");
+            if (!mf) {
+                fprintf(stderr, "[savestatebatch] cannot open manifest '%s'\n", p);
+            } else {
+                char line[600];
+                int line_no = 0, added = 0;
+                // Parser identico a quello di lair.cpp ma usa solo entry form.
+                auto classify = [](const char* s, uint32_t* out_frame, char* out_path) -> int {
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') return 0;
+                    char* end = NULL;
+                    long f_long = strtol(s, &end, 10);
+                    if (end == s || f_long <= 0) return -1;
+                    s = end;
+                    // Reject +N / @D extensions (after-accept non supportato qui)
+                    if (*s == '+') return -1;
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == '\0' || *s == '\n' || *s == '\r') return -1;
+                    int i = 0;
+                    while (*s != '\0' && *s != '\n' && *s != '\r' &&
+                           *s != ' ' && *s != '\t' && i < 399) {
+                        out_path[i++] = *s++;
+                    }
+                    out_path[i] = '\0';
+                    if (i == 0) return -1;
+                    *out_frame = (uint32_t)f_long;
+                    return 1;
+                };
+
+                // First pass: count valid entries so we can mark the LAST one
+                // with quit_after_save=true.
+                int total_valid = 0;
+                while (fgets(line, sizeof(line), mf)) {
+                    uint32_t f; char path[400];
+                    if (classify(line, &f, path) == 1) total_valid++;
+                }
+                rewind(mf);
+                while (fgets(line, sizeof(line), mf)) {
+                    line_no++;
+                    uint32_t f = 0; char path[400] = {0};
+                    int c = classify(line, &f, path);
+                    if (c == 0) continue;
+                    if (c == -1) {
+                        fprintf(stderr, "[savestatebatch] manifest line %d malformed/unsupported, skipped: %s",
+                                line_no, line);
+                        continue;
+                    }
+                    added++;
+                    bool is_last = (added == total_valid);
+                    save_state::arm_save_on_search(f, path, /*quit_after_save=*/is_last);
+                }
+                fclose(mf);
+                fprintf(stderr, "[savestatebatch] armed %d save targets from '%s'\n", added, p);
+                bRes = (added > 0);
+            }
+        }
+    }
+    return bRes;
 }

@@ -1454,6 +1454,12 @@ bool ace::handle_cmdline_arg(const char *arg)
         bRes              = true;
     }
 
+    // 2026-05-23: fallback alla classe parent lair per tutti i flag custom
+    // del fork: -explorer, -savestate, -savestatebatch, -loadstate,
+    // -loadstatechain, -marabelli, -mask, ecc.  Senza questo, su Space Ace
+    // erano silenziosamente ignorati.
+    if (!bRes) bRes = lair::handle_cmdline_arg(arg);
+
     return bRes;
 }
 

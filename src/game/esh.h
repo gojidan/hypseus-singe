@@ -49,6 +49,7 @@ class esh : public game
     void repaint(); // function to repaint video
     void patch_roms();
     void set_version(int);
+    bool handle_cmdline_arg(const char *arg); // 2026-05-23: -savestatebatch per cattura save state
 
   protected:
     Uint8 character[0x8000];
