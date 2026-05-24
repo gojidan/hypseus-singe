@@ -420,9 +420,17 @@ void esh::port_write(Uint16 port, Uint8 value)
 
     // these get written before laserdisc activity, not sure what they do
     case 0xFA:
+        // 2026-05-24 (Alan): intercettato come potenziale "joystick LED on/off"
+        // per finestre input. Loggato come io_write nel NDJSON.
+        rom_logger::log_io_write("esh_lights_FA", (port & 0xFF), value, g_ldp->get_current_frame());
         break;
     case 0xFB:
-        // turns on action button lights?
+        // turns on action button lights (commento originale del codice)
+        // 2026-05-24 (Alan): finalmente intercettato come io_write nel NDJSON.
+        // Questo dovrebbe corrispondere al LED del pulsante azione che si accende
+        // quando ROM apre finestra di input → permette di dedurre la finestra
+        // ROM-side senza scan walker.
+        rom_logger::log_io_write("esh_lights_FB", (port & 0xFF), value, g_ldp->get_current_frame());
         break;
     default:
         LOGD << fmt("Port %x being written at PC %x with a value of %x", port & 0xFF, Z80_GET_PC, value);
