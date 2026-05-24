@@ -704,6 +704,108 @@ bool esh::handle_cmdline_arg(const char *arg)
                 bRes = (added > 0);
             }
         }
+    } else if (strncasecmp(arg, "-savestate", 10) == 0) {
+        // 2026-05-24: portato da lair.cpp (single-target save).
+        // Usage: -savestateFRAME:PATH
+        const char* p = arg + 10;
+        if (*p == ',' || *p == ':' || *p == '=') p++;
+        uint32_t frame = 0;
+        char path[400] = {0};
+        int n = sscanf(p, "%u:%399s", &frame, path);
+        if (n == 2 && frame > 0) {
+            save_state::arm_save_on_search(frame, path, /*quit_after_save=*/true);
+            bRes = true;
+        } else {
+            fprintf(stderr, "[savestate] usage: -savestateFRAME:PATH\n");
+        }
+    } else if (strncasecmp(arg, "-loadstatechain", 15) == 0) {
+        // 2026-05-24: portato da lair.cpp per scan multi-slot futuro.
+        // Usage: -loadstatechainMANIFEST_FILE
+        // Manifest format: state_path / timeout_ms / step: OFFSET INPUT (1..16)
+        const char* p = arg + 15;
+        if (*p == ',' || *p == ':' || *p == '=') p++;
+        if (*p == '\0') {
+            fprintf(stderr, "[loadstatechain] usage: -loadstatechainMANIFEST_FILE\n");
+        } else {
+            FILE* mf = fopen(p, "r");
+            if (!mf) {
+                fprintf(stderr, "[loadstatechain] cannot open manifest '%s'\n", p);
+            } else {
+                char line[600];
+                char state_path[400] = {0};
+                unsigned timeout_ms = 5000;
+                int32_t  offsets[16] = {0};
+                char     inputs[16]  = {0};
+                int      n_steps = 0;
+                while (fgets(line, sizeof(line), mf)) {
+                    char* s = line;
+                    while (*s == ' ' || *s == '\t') s++;
+                    if (*s == '#' || *s == '\n' || *s == '\r' || *s == '\0') continue;
+                    char buf[400];
+                    if (sscanf(s, "state_path: %399s", buf) == 1 ||
+                        sscanf(s, "state_path:%399s",  buf) == 1) {
+                        strncpy(state_path, buf, sizeof(state_path) - 1);
+                        continue;
+                    }
+                    unsigned tms;
+                    if (sscanf(s, "timeout_ms: %u", &tms) == 1 ||
+                        sscanf(s, "timeout_ms:%u",  &tms) == 1) {
+                        timeout_ms = tms;
+                        continue;
+                    }
+                    int32_t off; char inp;
+                    if (sscanf(s, "step: %d %c", &off, &inp) == 2 ||
+                        sscanf(s, "step:%d %c",  &off, &inp) == 2) {
+                        if (n_steps < 16) {
+                            offsets[n_steps] = off;
+                            inputs[n_steps]  = (char)toupper((unsigned char)inp);
+                            n_steps++;
+                        }
+                        continue;
+                    }
+                }
+                fclose(mf);
+                if (state_path[0] == '\0' || n_steps == 0) {
+                    fprintf(stderr, "[loadstatechain] manifest invalid: state_path=%s n_steps=%d\n",
+                            state_path, n_steps);
+                } else {
+                    save_state::arm_load_chain(state_path, offsets, inputs, n_steps, timeout_ms);
+                    bRes = true;
+                }
+            }
+        }
+    } else if (strncasecmp(arg, "-loadstate", 10) == 0) {
+        // 2026-05-24: portato da lair.cpp.
+        // Usage: -loadstate PATH[:OFFSET[:INPUT[:TIMEOUT_MS]]]
+        const char* p = arg + 10;
+        if (*p == ',' || *p == ':' || *p == '=') p++;
+        char     path[400] = {0};
+        int      offset    = 0;
+        char     input     = '\0';
+        unsigned timeout   = 5000;
+        // Tolerate Windows drive letter at start (es. F:/...)
+        int i = 0;
+        if (isalpha((unsigned char)p[0]) && p[1] == ':') {
+            path[i++] = *p++;
+            path[i++] = *p++;
+        }
+        while (*p && *p != ':' && i < 399) { path[i++] = *p++; }
+        path[i] = '\0';
+        if (*p == ':') {
+            p++; offset = atoi(p);
+            while (*p && *p != ':') p++;
+            if (*p == ':') {
+                p++; input = (char)toupper((unsigned char)*p);
+                while (*p && *p != ':') p++;
+                if (*p == ':') { p++; timeout = (unsigned)atoi(p); }
+            }
+        }
+        if (path[0]) {
+            save_state::arm_load(path, offset, input, timeout);
+            bRes = true;
+        } else {
+            fprintf(stderr, "[loadstate] usage: -loadstate PATH[:OFFSET[:INPUT[:TIMEOUT_MS]]]\n");
+        }
     }
     return bRes;
 }
