@@ -304,7 +304,20 @@ void esh::do_irq(unsigned int which_irq)
 }
 
 // does anything special needed to send an NMI
-void esh::do_nmi() { Z80_ASSERT_NMI; }
+// 2026-05-24: tick explorer (test mode advance) + save_state (delayed save).
+// Senza questi, -loadstate con INPUT:TIMEOUT armava il test mode ma poi non
+// veniva mai eseguito → hypseus hangs aspettando input mai applicato.
+// Pattern identico a lair::do_nmi (lair.cpp:528).
+void esh::do_nmi() {
+    Z80_ASSERT_NMI;
+    explorer::Action expl = explorer::tick((uint32_t)g_ldp->get_current_frame());
+    for (int _s = 0; _s < SWITCH_COUNT; _s++) {
+        if (expl.press_mask   & (1u << _s)) this->input_enable (_s, NOMOUSE);
+        if (expl.release_mask & (1u << _s)) this->input_disable(_s, NOMOUSE);
+    }
+    save_state::tick_nmi(m_cpumem, cpu::MEM_SIZE,
+                         (uint32_t)g_ldp->get_current_frame());
+}
 
 void esh::cpu_mem_write(Uint16 addr, Uint8 value)
 {
