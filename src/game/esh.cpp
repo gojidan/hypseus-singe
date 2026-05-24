@@ -39,6 +39,7 @@
 #include "esh.h"
 #include "rom_logger.h"  // 2026-05-01: ROM logger NDJSON come per DL
 #include "../save_state.h"  // 2026-05-23: -savestatebatch per cattura batch
+#include "explorer.h"        // 2026-05-24: test mode chain (per -loadstate INPUT/TIMEOUT)
 #include "../cpu/cpu.h"
 #include "../cpu/generic_z80.h"
 #include "../io/conout.h"
@@ -125,6 +126,43 @@ bool esh::init()
     bool result = game::init();
     if (result) {
         rom_logger::open(m_shortgamename, 0, 0);
+    }
+    // 2026-05-24: save_state load — replica del pattern lair.cpp:905-941.
+    // Se -loadstate e' stato armato (= arm_load chiamato in handle_cmdline_arg),
+    // applica il save state al cpumem + seek LDP al frame salvato + arma test
+    // mode (se -loadstate ha INPUT/TIMEOUT).  Senza questa chiamata, la ROM
+    // ignora il -loadstate e parte normale dall'attract = scan PC1 vuoto.
+    if (result && save_state::is_load_armed()) {
+        int32_t  test_offset  = save_state::get_test_frame_offset();
+        char     test_input   = save_state::get_test_input();
+        uint32_t test_timeout = save_state::get_test_timeout_ms();
+        uint32_t saved_frame = 0;
+        if (save_state::try_load_armed(m_cpumem, cpu::MEM_SIZE, &saved_frame)) {
+            fprintf(stderr, "[esh] load_state restored — seeking LDP to frame %u\n", saved_frame);
+            fflush(stderr);
+            if (g_ldp) {
+                char frame_str[16];
+                snprintf(frame_str, sizeof(frame_str), "%u", saved_frame);
+                g_ldp->pre_search(frame_str, true);
+            }
+            // Arm test mode in explorer (single-step o chain).
+            int chain_count = save_state::get_test_chain_count();
+            if (chain_count > 0) {
+                if (chain_count == 1 && test_input != '\0' && test_input != '-') {
+                    explorer::init_test_mode(saved_frame, test_offset, test_input, test_timeout);
+                } else if (chain_count > 1) {
+                    explorer::TestStep steps[16];
+                    for (int i = 0; i < chain_count && i < 16; ++i) {
+                        steps[i].offset = save_state::get_test_chain_offset(i);
+                        steps[i].input  = save_state::get_test_chain_input(i);
+                    }
+                    explorer::init_test_mode_chain(saved_frame, steps, chain_count, test_timeout);
+                }
+            }
+        } else {
+            fprintf(stderr, "[esh] load_state FAILED — continuing with normal init\n");
+            fflush(stderr);
+        }
     }
     return result;
 }
