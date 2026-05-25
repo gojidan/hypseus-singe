@@ -27,6 +27,16 @@
 #define PULSE_PRESS   5
 #define PULSE_PERIOD  20
 
+// 2026-05-25 fix chain replay fail (Alan + Claude): test mode fire era
+// troppo breve (5 NMI = ~22ms a -fastboot, ~225 NMI/s) — la ROM polling
+// rate non lo registrava per mosse ravvicinate (DL Final slot 11 mai
+// raggiunto, SA spa01 slot 2 mai mappato). Il tap umano di Alan dura
+// ~88ms (2 frame video) = ~20 NMI a -fastboot. Quindi test mode usa una
+// PRESS DURATION SEPARATA per emulare il tap umano realistico.
+// Simple mode (attract loop) mantiene PULSE_PRESS=5 per non alterare
+// il behavior validato.
+#define TEST_MODE_PULSE_PRESS 20
+
 // Switch bitmask helpers
 #define MASK_U  (1u << SWITCH_UP)
 #define MASK_L  (1u << SWITCH_LEFT)
@@ -1160,7 +1170,10 @@ Action tick(uint32_t current_disc_frame)
             if (s_test_input_mask != 0) {
                 action.press_mask = s_test_input_mask;
                 s_held_mask       = s_test_input_mask;
-                s_hold_end_nmi    = s_nmi + PULSE_PRESS;
+                // 2026-05-25: TEST_MODE_PULSE_PRESS (= 20 NMI, ~88ms a -fastboot)
+                // invece di PULSE_PRESS (= 5 NMI). Emula tap umano realistico
+                // di Alan per fix chain replay fail su mosse ravvicinate.
+                s_hold_end_nmi    = s_nmi + TEST_MODE_PULSE_PRESS;
                 fprintf(stderr, "[test_mode] applying input mask 0x%x at disc=%u (target=%u)\n",
                         s_test_input_mask, current_disc_frame, s_test_target_frame);
                 fflush(stderr);
