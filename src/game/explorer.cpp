@@ -456,6 +456,20 @@ static int32_t  s_test_step_offsets[TEST_MAX_STEPS];
 static uint32_t s_test_step_masks[TEST_MAX_STEPS];
 static char     s_test_step_inputs[TEST_MAX_STEPS];
 
+// 2026-05-27 (Alan, opzione B): disc-paused fallback per TEST_MODE_WAIT.
+// Alcune scene (YBR slot 2+, probabilmente Chapel/Mudmen/DL Final/PoG/Fire Pit Rev)
+// salvano il save_state quando la ROM e' in stato PAUSE durante listening window.
+// In quel caso il disco e' fermo: TEST_MODE_WAIT non vede current_disc_frame
+// avanzare verso il target, e l'input viene applicato solo dopo che la ROM
+// timeoutta e seeka via (= OLTRE la listening window, sempre buzz).
+// Detectiamo il pause (= disc fermo per N NMI consecutivi) e usiamo l'offset
+// come delta temporale dal restore invece che frame-based.
+static uint32_t s_test_last_disc_frame    = 0;
+static uint64_t s_test_nmi_disc_paused    = 0;
+static uint64_t s_test_step_start_nmi     = 0;
+#define TEST_PAUSE_DETECT_NMI 30  // ~400ms a -fastboot, conferma pausa
+#define TEST_NMI_PER_VIDEO_FRAME 3  // NMI_HZ ~75 / FPS ~24 = ~3.13, arrotondato
+
 static uint32_t input_char_to_mask(char c)
 {
     switch ((char)toupper((unsigned char)c)) {
@@ -667,6 +681,10 @@ bool init_test_mode_chain(uint32_t scene_canonical_frame,
     s_test_timeout_ms    = timeout_ms;
     s_test_input_done    = false;
     s_test_input_nmi     = 0;
+    // 2026-05-27 (Alan opzione B): init pause-detect per primo step.
+    s_test_last_disc_frame    = 0;
+    s_test_nmi_disc_paused    = 0;
+    s_test_step_start_nmi     = s_nmi;
     // Skip BOOT/ATTRACT/COIN — go straight to test wait of the first step.
     s_state              = TEST_MODE_WAIT;
     s_state_nmi          = s_nmi;
@@ -1165,8 +1183,33 @@ Action tick(uint32_t current_disc_frame)
 
     // ─── Test mode (frame-by-frame scan) ─────────────────────────────────
     case TEST_MODE_WAIT:
+    {
+        // 2026-05-27 (Alan opzione B): rilevamento pausa disco + fallback NMI.
+        // Se la ROM ha messo il disco in pausa (= save_state catturato durante
+        // listening window con disc fermo), current_disc_frame non avanzera' mai
+        // verso s_test_target_frame. Quindi quando il disco e' fermo da >=N NMI,
+        // usiamo l'offset come delta temporale dal restore invece che frame-based.
+        if (current_disc_frame == s_test_last_disc_frame) {
+            s_test_nmi_disc_paused++;
+        } else {
+            s_test_nmi_disc_paused = 0;
+            s_test_last_disc_frame = current_disc_frame;
+        }
+        bool paused_fallback = false;
+        if (s_test_nmi_disc_paused >= TEST_PAUSE_DETECT_NMI) {
+            uint64_t elapsed_step_nmi = s_nmi - s_test_step_start_nmi;
+            uint64_t target_nmi_delta = (uint64_t)abs(s_test_step_offsets[s_test_step_index])
+                                        * TEST_NMI_PER_VIDEO_FRAME;
+            if (s_test_step_offsets[s_test_step_index] < 0) {
+                // Negative offset: fire immediately (= "before target" semantica
+                // mantenuta, ROM gia' in pausa quindi non si puo' tornare indietro).
+                paused_fallback = true;
+            } else if (elapsed_step_nmi >= target_nmi_delta) {
+                paused_fallback = true;
+            }
+        }
         // Wait for the disc to reach the target frame, then apply input.
-        if (current_disc_frame >= s_test_target_frame) {
+        if (current_disc_frame >= s_test_target_frame || paused_fallback) {
             if (s_test_input_mask != 0) {
                 action.press_mask = s_test_input_mask;
                 s_held_mask       = s_test_input_mask;
@@ -1174,8 +1217,9 @@ Action tick(uint32_t current_disc_frame)
                 // invece di PULSE_PRESS (= 5 NMI). Emula tap umano realistico
                 // di Alan per fix chain replay fail su mosse ravvicinate.
                 s_hold_end_nmi    = s_nmi + TEST_MODE_PULSE_PRESS;
-                fprintf(stderr, "[test_mode] applying input mask 0x%x at disc=%u (target=%u)\n",
-                        s_test_input_mask, current_disc_frame, s_test_target_frame);
+                fprintf(stderr, "[test_mode] applying input mask 0x%x at disc=%u (target=%u%s)\n",
+                        s_test_input_mask, current_disc_frame, s_test_target_frame,
+                        paused_fallback ? ", PAUSED-FALLBACK" : "");
                 fflush(stderr);
             } else {
                 fprintf(stderr, "[test_mode] target reached at disc=%u — observing only (no press)\n",
@@ -1201,6 +1245,7 @@ Action tick(uint32_t current_disc_frame)
             enter_state(TEST_MODE_DONE);
         }
         break;
+    }  // close TEST_MODE_WAIT block
 
     case TEST_MODE_HELD:
         // Release the input after PULSE_PRESS NMIs.
@@ -1220,6 +1265,10 @@ Action tick(uint32_t current_disc_frame)
             s_test_input_mask   = s_test_step_masks[s_test_step_index];
             s_test_input_done   = false;
             s_test_input_nmi    = 0;
+            // 2026-05-27 (Alan opzione B): reset pause-detect per nuovo step.
+            s_test_last_disc_frame = 0;
+            s_test_nmi_disc_paused = 0;
+            s_test_step_start_nmi  = s_nmi;
             fprintf(stderr, "[test_mode] CHAIN advance to step %d/%d: target=%u input=%c\n",
                     s_test_step_index + 1, s_test_step_count,
                     s_test_target_frame,
