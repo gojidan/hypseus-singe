@@ -1189,11 +1189,13 @@ Action tick(uint32_t current_disc_frame)
         // listening window con disc fermo), current_disc_frame non avanzera' mai
         // verso s_test_target_frame. Quindi quando il disco e' fermo da >=N NMI,
         // usiamo l'offset come delta temporale dal restore invece che frame-based.
-        if (current_disc_frame == s_test_last_disc_frame) {
-            s_test_nmi_disc_paused++;
-        } else {
-            s_test_nmi_disc_paused = 0;
+        // 2026-05-27 (v2): usa high-water mark invece di equality per gestire
+        // micro-oscillazioni del frame counter (VLDP puo' avanzare 1-2 frame).
+        if (current_disc_frame > s_test_last_disc_frame) {
             s_test_last_disc_frame = current_disc_frame;
+            s_test_nmi_disc_paused = 0;
+        } else {
+            s_test_nmi_disc_paused++;
         }
         bool paused_fallback = false;
         if (s_test_nmi_disc_paused >= TEST_PAUSE_DETECT_NMI) {
@@ -1207,6 +1209,14 @@ Action tick(uint32_t current_disc_frame)
             } else if (elapsed_step_nmi >= target_nmi_delta) {
                 paused_fallback = true;
             }
+        }
+        // 2026-05-27 (debug): log periodico per diagnosticare pause-detect.
+        if ((s_nmi % 60) == 0) {
+            fprintf(stderr, "[test_mode] DEBUG nmi=%lu disc=%u target=%u paused_count=%lu elapsed_step=%lu\n",
+                    (unsigned long)s_nmi, current_disc_frame, s_test_target_frame,
+                    (unsigned long)s_test_nmi_disc_paused,
+                    (unsigned long)(s_nmi - s_test_step_start_nmi));
+            fflush(stderr);
         }
         // Wait for the disc to reach the target frame, then apply input.
         if (current_disc_frame >= s_test_target_frame || paused_fallback) {
