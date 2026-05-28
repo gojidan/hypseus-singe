@@ -82,6 +82,21 @@ static int32_t  s_test_frame_offset   = 0;
 static char     s_test_input          = '\0';
 static uint32_t s_test_timeout_ms     = 5000;
 
+// 2026-05-28 (Alan): save-after-still-entries state.
+// Conta i 0xFB (still-frame mode) emessi dalla ROM al LD-V1000 DOPO che
+// chain_length accepts sono stati visti (= chain replay completato).
+// Save al s_armed_still_target-esimo still post-chain.
+struct ArmedSaveAfterStill {
+    uint32_t scene_canonical;
+    int      still_target;
+    int      chain_length;
+    int      delay_nmi;
+    char     path[512];
+};
+static ArmedSaveAfterStill s_armed_still = {0, 0, 0, 0, {0}};
+static bool s_armed_still_active = false;
+static int  s_still_entries_post_chain = 0;
+
 // 2026-04-30: chain test parameters (Approach D).  Stored as parallel
 // arrays for simplicity.  arm_load() populates a chain of length 1.
 // arm_load_chain() populates the full chain.
@@ -446,6 +461,60 @@ void tick_nmi(uint8_t* cpumem, uint32_t cpumem_size, uint32_t current_frame)
         set_quitflag();
     }
 }
+
+// 2026-05-28 (Alan): save-after-still-entries arm + notify.
+
+void arm_save_after_still_entries(uint32_t scene_canonical,
+                                   int still_target,
+                                   const char* path,
+                                   bool quit_after_save,
+                                   int delay_nmi,
+                                   int chain_length)
+{
+    if (path == NULL || path[0] == '\0') {
+        s_armed_still_active = false;
+        return;
+    }
+    s_armed_still.scene_canonical = scene_canonical;
+    s_armed_still.still_target    = still_target;
+    s_armed_still.chain_length    = chain_length;
+    s_armed_still.delay_nmi       = delay_nmi;
+    strncpy(s_armed_still.path, path, sizeof(s_armed_still.path) - 1);
+    s_armed_still.path[sizeof(s_armed_still.path) - 1] = '\0';
+    s_armed_still_active = true;
+    s_still_entries_post_chain = 0;
+    if (quit_after_save) {
+        s_quit_when_all_saved = true;
+    }
+    fprintf(stderr, "[save_state] armed save_after_still_entries: scene=%u "
+                    "still_target=%d chain_length=%d delay_nmi=%d path='%s'\n",
+            scene_canonical, still_target, chain_length, delay_nmi, path);
+    fflush(stderr);
+}
+
+void notify_still_entry()
+{
+    if (!s_armed_still_active) return;
+    // Conta still entries SOLO dopo che chain_length accepts sono stati visti
+    // (= chain replay completato). Prima, i 0xFB sono per slot del chain stesso.
+    if (s_accept_in_scene < s_armed_still.chain_length) return;
+    s_still_entries_post_chain++;
+    fprintf(stderr, "[save_state] still_entry post-chain #%d (target %d)\n",
+            s_still_entries_post_chain, s_armed_still.still_target);
+    fflush(stderr);
+    if (s_still_entries_post_chain < s_armed_still.still_target) return;
+    // Target raggiunto: arm pending save (= tick_nmi avra' cpumem per fare save).
+    // Per delay=0, tick_nmi salva al prossimo tick (= ~13ms latency, accettabile).
+    s_pending_save_active = true;
+    s_pending_save_remain = s_armed_still.delay_nmi > 0 ? s_armed_still.delay_nmi : 0;
+    strncpy(s_pending_save_path, s_armed_still.path, sizeof(s_pending_save_path) - 1);
+    s_pending_save_path[sizeof(s_pending_save_path) - 1] = '\0';
+    s_armed_still_active = false;  // consumed
+    fprintf(stderr, "[save_state] still-aware save armed: delay=%d NMI -> '%s'\n",
+            s_armed_still.delay_nmi, s_armed_still.path);
+    fflush(stderr);
+}
+
 
 // ─── Triggered load ────────────────────────────────────────────────────────
 

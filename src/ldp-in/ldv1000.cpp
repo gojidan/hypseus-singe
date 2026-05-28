@@ -48,6 +48,7 @@
 #include "../io/conout.h"
 #include "../io/numstr.h"
 #include "../ldp-out/ldp.h"
+#include "../save_state.h"
 #ifdef DEBUG
 #include <assert.h>
 #endif
@@ -392,6 +393,11 @@ void write(unsigned char value)
                    // we pause
             g_ldp->pre_pause();
             g_output = 0x65; // stopped and not ready
+            // 2026-05-28 (Alan): segnala still-entry al save_state framework.
+            // Usato da arm_save_after_still_entries per catturare ROM nel
+            // listening window di scene "continue" (YBR/Chapel/Mudmen/etc.)
+            // dove save_after_accepts cattura ROM in stato sbagliato.
+            save_state::notify_still_entry();
             break;
         case 0x20: // Badlands custom command (see below)
             LOGD << "Got a 0x20";

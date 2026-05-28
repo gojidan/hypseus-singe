@@ -122,6 +122,33 @@ void tick_nmi(uint8_t* cpumem,
               uint32_t cpumem_size,
               uint32_t current_frame);
 
+
+// ─── 2026-05-28 (Alan): save-when-listening (still-frame entries) ────────
+//
+// Mode alternativo a save_after_accepts: invece di contare accepts (=
+// rischio cattura ROM in stato sbagliato per scene "continue" come YBR/
+// Chapel/Mudmen/etc.), conta le entries in still-frame mode del LD-V1000
+// (= cmd 0xFB). Quando ROM emette 0xFB, sta entrando nel listening
+// window per il prossimo slot — il momento PERFETTO per save_state.
+//
+// Semantica: dopo che chain_length accepts sono stati visti (= chain
+// replay completato), il prossimo 0xFB e' il listening del SUCCESSIVO
+// slot. still_target = 1 => save al 1° still post-chain.
+//
+// arm_save_after_still_entries(scene, still_target, path, quit, delay_nmi)
+// notify_still_entry()  // chiamato da ldv1000.cpp su 0xFB
+void arm_save_after_still_entries(uint32_t scene_canonical,
+                                   int still_target,
+                                   const char* path,
+                                   bool quit_after_save,
+                                   int delay_nmi,
+                                   int chain_length);
+
+// Chiamato da ldv1000.cpp su comando 0xFB (still-frame mode). No cpumem
+// access needed — segnala solo. Il save vero avviene in tick_nmi() che
+// ha cpumem disponibile via lair::do_nmi.
+void notify_still_entry();
+
 // Called by ldp::pre_search() with the search target frame.  If a save
 // has been armed and the frame matches, performs the save now.
 // `cpumem`, `cpumem_size`: passed from the active game (g_game).

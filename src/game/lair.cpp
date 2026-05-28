@@ -1309,6 +1309,7 @@ bool lair::handle_cmdline_arg(const char *arg)
                 char     save_path[400] = {0};
                 unsigned save_scene_canonical = 0;
                 unsigned save_after_accepts = 1;
+                unsigned save_after_still_entries = 0;  // 0 = legacy mode (use accepts)
                 unsigned save_delay_nmi = 0;
                 unsigned save_quit = 1;
                 while (fgets(line, sizeof(line), mf)) {
@@ -1355,6 +1356,14 @@ bool lair::handle_cmdline_arg(const char *arg)
                         save_after_accepts = uval;
                         continue;
                     }
+                    // 2026-05-28 (Alan): save_after_still_entries — alternativa
+                    // a save_after_accepts per scene "continue". N=1 => salva
+                    // al 1° still-frame mode (0xFB) post-chain.
+                    if (sscanf(s, "save_after_still_entries: %u", &uval) == 1 ||
+                        sscanf(s, "save_after_still_entries:%u",  &uval) == 1) {
+                        save_after_still_entries = uval;
+                        continue;
+                    }
                     if (sscanf(s, "save_delay_nmi: %u", &uval) == 1 ||
                         sscanf(s, "save_delay_nmi:%u",  &uval) == 1) {
                         save_delay_nmi = uval;
@@ -1374,17 +1383,34 @@ bool lair::handle_cmdline_arg(const char *arg)
                     save_state::arm_load_chain(state_path, offsets, inputs,
                                                n_steps, timeout_ms);
                     // 2026-05-02 task B-v2: arm save-after-accept if requested.
+                    // 2026-05-28 (Alan): se save_after_still_entries > 0, usa
+                    // il nuovo mode listening-aware (= save al N-esimo 0xFB
+                    // post-chain). Altrimenti legacy save_after_accepts.
                     if (save_path[0] != '\0' && save_scene_canonical != 0) {
-                        save_state::arm_save_after_accept(
-                            save_scene_canonical,
-                            (int)save_after_accepts,
-                            save_path,
-                            save_quit != 0,
-                            (int)save_delay_nmi);
-                        fprintf(stderr,
-                                "[loadstatechain] task B-v2 save armed: scene=%u accepts=%u delay_nmi=%u quit=%u path='%s'\n",
-                                save_scene_canonical, save_after_accepts,
-                                save_delay_nmi, save_quit, save_path);
+                        if (save_after_still_entries > 0) {
+                            save_state::arm_save_after_still_entries(
+                                save_scene_canonical,
+                                (int)save_after_still_entries,
+                                save_path,
+                                save_quit != 0,
+                                (int)save_delay_nmi,
+                                n_steps);
+                            fprintf(stderr,
+                                    "[loadstatechain] save_after_still armed: scene=%u still_target=%u chain_len=%d delay_nmi=%u quit=%u path='%s'\n",
+                                    save_scene_canonical, save_after_still_entries,
+                                    n_steps, save_delay_nmi, save_quit, save_path);
+                        } else {
+                            save_state::arm_save_after_accept(
+                                save_scene_canonical,
+                                (int)save_after_accepts,
+                                save_path,
+                                save_quit != 0,
+                                (int)save_delay_nmi);
+                            fprintf(stderr,
+                                    "[loadstatechain] task B-v2 save armed: scene=%u accepts=%u delay_nmi=%u quit=%u path='%s'\n",
+                                    save_scene_canonical, save_after_accepts,
+                                    save_delay_nmi, save_quit, save_path);
+                        }
                     }
                     bRes = true;
                 }
