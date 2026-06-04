@@ -623,6 +623,21 @@ bool parse_cmd_line(int argc, char **argv)
                 } else change_dir(s);
             }
 
+            // Override del window title (default: "Hypseus Singe: [<game>]").
+            // Usato da LGL (= LaserDiscGameLegends) per passare il display_name
+            // della variant selezionata (= es. "Cinematronics - USA - F2 - Easy")
+            // invece dello slug interno Hypseus.  Quando assente, fallback al
+            // titolo default "Hypseus Singe: [<game>]".
+            else if (strcasecmp(s, "-window-title") == 0) {
+                get_next_word(s, sizeof(s));
+                if (s[0] == 0) {
+                    printerror("window-title switch used but no title specified!");
+                    result = false;
+                } else {
+                    video::set_window_title_override(s);
+                }
+            }
+
             // if user wants laserdisc player to blank video while searching
             // (VLDP only)
             else if (strcasecmp(s, "-blank_searches") == 0) {

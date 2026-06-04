@@ -1250,10 +1250,27 @@ void set_window_title(char* value)
      if (g_window) SDL_SetWindowTitle(g_window, g_window_title);
 }
 
+// Override del window title via CLI (-window-title "...").  Quando settato
+// non-vuoto, set_game_window() usa questo invece di "Hypseus Singe: [game]".
+// LGL (= LaserDiscGameLegends) lo usa per passare il display_name della
+// variant attualmente selezionata (= es. "Cinematronics - USA - F2 - Easy")
+// invece dello slug Hypseus interno (= es. "lair").
+static std::string g_title_override_cli;
+
+void set_window_title_override(const char* value)
+{
+    g_title_override_cli = value ? value : "";
+}
+
 void set_game_window(const char* value)
 {
-     std::string game(value);
-     std::string title = "Hypseus Singe: [" + game + "]";
+     std::string title;
+     if (!g_title_override_cli.empty()) {
+         title = g_title_override_cli;
+     } else {
+         std::string game(value);
+         title = "Hypseus Singe: [" + game + "]";
+     }
      strncpy(g_window_title, title.c_str(), TITLE_LENGTH - 1);
 
      g_window_title[TITLE_LENGTH - 1] = '\0';
