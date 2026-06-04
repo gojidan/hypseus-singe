@@ -265,8 +265,11 @@ bool superd::init()
     // it off later.  But since the real machine does do it, it's on by default.
 
     // 2026-06-04 (Claude autonomous): RomLogger session start.
-    // m_banks[2] e m_banks[3] sono i dipswitch banks (vedi port_read).
-    rom_logger::open(m_shortgamename, m_banks[2], m_banks[3]);
+    // banks[2] e banks[3] sono i dipswitch banks (vedi port_read).
+    // Fix 4 giu sera: era "m_banks" (typo da mia esperienza altri game
+    // modules dove il membro si chiama m_banks) - in superd la classe
+    // usa "banks" senza prefisso m_.
+    rom_logger::open(m_shortgamename, banks[2], banks[3]);
 
     return true;
 }
