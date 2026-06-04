@@ -290,6 +290,18 @@ void superd::do_irq(unsigned int which_irq)
 void superd::cpu_mem_write(Uint16 Addr, Uint8 Value)
 // Called whenever the Z80 emulator wants to write to memory
 {
+    // 2026-06-04 (Claude autonomous): SDQ disegna a video le ENORMI
+    // frecce e bottoni hint che la ROM mostra al giocatore (Alan
+    // 3 giu sera).  Tile/Character RAM e' a 0x5c00-0x5fff (32x32 tile
+    // map).  Logghiamo ogni scrittura che cambia il tile selezionato
+    // -- a posteriori possiamo identificare i tile-code delle hint
+    // (arrow up/down/left/right, button hand/feet) e ricostruire il
+    // pattern temporale rispetto a enable events.
+    if (Addr >= 0x5c00 && Addr <= 0x5fff && Value != m_cpumem[Addr]) {
+        rom_logger::log_io_write("tile_ram", Addr, Value,
+                                 g_ldp->get_current_frame());
+    }
+
     m_cpumem[Addr] = Value;
 
     // if the cpu writes to video memory, update the screen on the next

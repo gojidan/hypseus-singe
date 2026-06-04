@@ -334,6 +334,23 @@ void esh::cpu_mem_write(Uint16 addr, Uint8 value)
         rom_logger::log_lives(value, g_ldp->get_current_frame());
     }
 
+    // 2026-06-04 (Claude autonomous): Esh disegna a video gli HINT
+    // (asterischi che indicano la mossa attesa, secondo Alan).  La
+    // character RAM e' a 0xf000-0xf3ff (32 char x N row).  Logghiamo
+    // ogni scrittura non-nulla che cambia valore -- cosi' a posteriori
+    // possiamo ricostruire il testo che la ROM disegna pre-input
+    // (= candidato signal per bot ROM-guided MaraEsh).
+    //
+    // Attribute RAM e' a 0xf400-0xf7ff (palette + blink flags) - utile
+    // anche per detect "char visible vs hidden" (palette=0 -> off).
+    if (addr >= 0xf000 && addr <= 0xf3ff && value != m_cpumem[addr]) {
+        rom_logger::log_io_write("char_ram", addr, value,
+                                 g_ldp->get_current_frame());
+    } else if (addr >= 0xf400 && addr <= 0xf7ff && value != m_cpumem[addr]) {
+        rom_logger::log_io_write("attr_ram", addr, value,
+                                 g_ldp->get_current_frame());
+    }
+
     m_cpumem[addr] = value;
 }
 
