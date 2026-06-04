@@ -45,6 +45,8 @@
 #include "../ldp-out/ldp.h"
 #include "../io/conout.h"
 #include "../sound/sound.h"
+// 2026-06-04 (Claude autonomous): RomLogger extension for SDQ.
+#include "rom_logger.h"
 #include "../timer/timer.h"
 #include "../video/palette.h"
 
@@ -203,6 +205,10 @@ superd::superd()
                                     {"sdq-cprm.bin", NULL, &color_prom[0x0000], 0x20, 0x96701569},
                                     {NULL}};
     m_rom_list = roms;
+    // 2026-06-04 (Claude autonomous): rom_logger::open() viene chiamato in
+    // superd::init() per gestire correttamente le derived class
+    // (sdqshort, sdqshortalt) che cambiano m_shortgamename DOPO il
+    // constructor base.
 }
 
 // superdon (short scenes) constructor
@@ -258,6 +264,10 @@ bool superd::init()
     // them to turn
     // it off later.  But since the real machine does do it, it's on by default.
 
+    // 2026-06-04 (Claude autonomous): RomLogger session start.
+    // m_banks[2] e m_banks[3] sono i dipswitch banks (vedi port_read).
+    rom_logger::open(m_shortgamename, m_banks[2], m_banks[3]);
+
     return true;
 }
 
@@ -298,6 +308,19 @@ void superd::port_write(Uint16 Port, Uint8 Value)
                                    // sample once
 
     Port &= 0xFF; // strip off high byte
+
+    // 2026-06-04 (Claude autonomous): RomLogger I/O write trace.
+    // SDQ uses sn76496 sound chip + LDV-1000 LD player + HD46505 video.
+    {
+        const char* tag = "unknown";
+        switch (Port) {
+            case 0x00:            tag = "ld"; break;        // LDV-1000 command
+            case 0x04:            tag = "sound"; break;     // sn76496 chip
+            case 0x08:            tag = "vid_or_coin"; break; // Vid output + coin counters
+            case 0x0c: case 0x0d: tag = "hd46505"; break;   // video chip
+        }
+        rom_logger::log_io_write(tag, Port, Value, g_ldp->get_current_frame());
+    }
 
     switch (Port) {
 
@@ -526,6 +549,9 @@ void superd::repaint()
 // this gets called when the user presses a key or moves the joystick
 void superd::input_enable(Uint8 move, Sint8 mouseID)
 {
+    // 2026-06-04 (Claude autonomous): RomLogger input enable trace.
+    rom_logger::log_input_enable(move, g_ldp->get_current_frame());
+
     switch (move) {
     case SWITCH_UP:
         banks[0] &= ~0x80;
@@ -570,6 +596,9 @@ void superd::input_enable(Uint8 move, Sint8 mouseID)
 // center position
 void superd::input_disable(Uint8 move, Sint8 mouseID)
 {
+    // 2026-06-04 (Claude autonomous): RomLogger input disable trace.
+    rom_logger::log_input_disable(move, g_ldp->get_current_frame());
+
     switch (move) {
     case SWITCH_UP:
         banks[0] |= 0x80;

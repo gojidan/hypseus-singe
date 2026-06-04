@@ -39,6 +39,10 @@
 #include "../video/tms9128nl.h"
 #include "../ldp-in/pr8210.h"
 #include "game.h"
+// 2026-06-04 (Claude autonomous): RomLogger extension for Cliff Hanger.
+// Vedi docs/ROMLOGGER_EXTENSION_PLAN_2026_06_04.md di Phenoma.
+#include "rom_logger.h"
+#include "../ldp-out/ldp.h"
 #include "../ldp-out/ldp.h"
 #include "../cpu/cpu.h"
 #include "../cpu/generic_z80.h"
@@ -113,6 +117,12 @@ cliff::cliff()
          {NULL}};
 
     m_rom_list = roms;
+
+    // 2026-06-04 (Claude autonomous): RomLogger session start.
+    // m_banks[0] = dipswitch 1-2 (difficolta'), m_banks[3] = dipswitch
+    // 18-19 (short scenes + buy in).  Passa quelli come switchA/B per
+    // documentare la configurazione del run.
+    rom_logger::open(m_shortgamename, m_banks[0], m_banks[3]);
 }
 
 // goal to go constructor
@@ -228,6 +238,29 @@ void cliff::port_write(Uint16 Port, Uint8 Value)
     static Uint8 l = 0;
 
     Port &= 0xFF; // strip off high byte
+
+    // 2026-06-04 (Claude autonomous): RomLogger I/O write trace.
+    // Tag semantici per categoria:
+    //   video      = TMS9128NL data / control (0x44, 0x54)
+    //   sound      = sound effect trigger (0x46)
+    //   ld_frame   = LD frame read (0x57)
+    //   ld_blip    = PR-8210 blip command (0x66)
+    //   bank       = bank select (0x60)
+    //   led        = LED on/off (0x6E/0x6F)
+    //   unknown    = altri write non identificati (= default fallback)
+    {
+        const char* tag = "unknown";
+        switch (Port) {
+            case 0x44: case 0x54: tag = "video"; break;
+            case 0x46:            tag = "sound"; break;
+            case 0x57:            tag = "ld_frame"; break;
+            case 0x60:            tag = "bank"; break;
+            case 0x66:            tag = "ld_blip"; break;
+            case 0x6E: case 0x6F: tag = "led"; break;
+            case 0x64: case 0x68: case 0x6A: tag = "ld_ctrl"; break;
+        }
+        rom_logger::log_io_write(tag, Port, Value, g_ldp->get_current_frame());
+    }
 
     switch (Port) {
     // this unsigned char is written to the screen at the specified coordinates
@@ -534,6 +567,9 @@ void cliff::input_enable(Uint8 move, Sint8 mouseID)
     static unsigned char service_enabled = 0; // start disabled
     static unsigned char test_enabled    = 0;
 
+    // 2026-06-04 (Claude autonomous): RomLogger input enable trace.
+    rom_logger::log_input_enable(move, g_ldp->get_current_frame());
+
     switch (move) {
     case SWITCH_UP:
         m_banks[6] &= ~1; // clear bit 0
@@ -587,6 +623,9 @@ void cliff::input_enable(Uint8 move, Sint8 mouseID)
 // center position
 void cliff::input_disable(Uint8 move, Sint8 mouseID)
 {
+    // 2026-06-04 (Claude autonomous): RomLogger input disable trace.
+    rom_logger::log_input_disable(move, g_ldp->get_current_frame());
+
     switch (move) {
     case SWITCH_UP:
         m_banks[6] |= 1; // set bit 0

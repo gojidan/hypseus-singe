@@ -43,6 +43,8 @@ NORMAL_MODE = 0x20
 */
 
 #include "config.h"
+// 2026-06-04 (Claude autonomous): RomLogger extension for DL2.
+#include "rom_logger.h"
 
 // Win32 doesn't use strcasecmp, it uses stricmp (lame)
 #ifdef WIN32
@@ -334,6 +336,10 @@ bool lair2::init()
 {
     cpu::init();
     g_ldp->pre_play(); // the LDP-1450 automatically begins playback
+    // 2026-06-04 (Claude autonomous): RomLogger session start.
+    // DL2 dipswitch banks: ROM internal (no esposti via m_banks come DL).
+    // Passa 0,0 come placeholder.
+    rom_logger::open(m_shortgamename, 0, 0);
     return true;
 }
 
@@ -692,6 +698,24 @@ void lair2::do_irq(unsigned int which_irq)
 
 void lair2::port_write(Uint16 port, Uint8 value)
 {
+    // 2026-06-04 (Claude autonomous): RomLogger I/O write trace.
+    // DL2 uses 8259 ICR + UART seriale per LD-V8000 + PIT.
+    {
+        const char* tag = "unknown";
+        switch (port) {
+            case 0x20:                                tag = "icr"; break;     // interrupt controller
+            case 0x42: case 0x43:                     tag = "pit"; break;     // programmable interval timer
+            case 0x61:                                tag = "ppi"; break;     // 8255 PPI
+            case 0x201: case 0x202:                   tag = "joystick"; break;// game port
+            case 0x2F8:                               tag = "uart_data"; break;// UART data (LD-V8000)
+        }
+        // Catch UART control registers (= 0x2F8 + offset)
+        if (port >= 0x2F8 && port <= 0x2F8 + 7 && tag[0] == 'u' && port != 0x2F8) {
+            tag = "uart_ctrl";
+        }
+        rom_logger::log_io_write(tag, port, value, g_ldp->get_current_frame());
+    }
+
     switch (port) {
     // ICR
     case 0x20:
@@ -899,6 +923,9 @@ bool lair2::set_bank(unsigned char which_bank, unsigned char value)
 
 void lair2::input_enable(Uint8 move, Sint8 mouseID)
 {
+    // 2026-06-04 (Claude autonomous): RomLogger input enable trace.
+    rom_logger::log_input_enable(move, g_ldp->get_current_frame());
+
     switch (move) {
     case SWITCH_UP:
         banks[0] &= ~0x01;
@@ -939,6 +966,9 @@ void lair2::input_enable(Uint8 move, Sint8 mouseID)
 
 void lair2::input_disable(Uint8 move, Sint8 mouseID)
 {
+    // 2026-06-04 (Claude autonomous): RomLogger input disable trace.
+    rom_logger::log_input_disable(move, g_ldp->get_current_frame());
+
     switch (move) {
     case SWITCH_UP:
         banks[0] |= 0x01;
