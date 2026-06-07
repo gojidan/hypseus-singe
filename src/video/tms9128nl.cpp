@@ -21,6 +21,7 @@
  */
 
 #include "config.h"
+#include "../game/rom_logger.h"
 
 // undefine this to get rid of debug messages, or 1 to view them
 //#define TMS_DEBUG 1
@@ -544,6 +545,19 @@ void tms9128nl_write_port1(unsigned char value)
 void tms9128nl_write_port0(unsigned char Value)
 // return a 1 if the screen needs updating
 {
+    // 2026-06-07 (Alan + Claude): traccia VRAM write con address ricostruito +
+    // classificazione regione, per identificare scritture nel Name Table
+    // (= 32x24 grid celle testuali dove appaiono "ACTION" / "STICK" / "LEVEL"
+    // ecc).  Necessario per bot Eco Cliff Hanger.
+    {
+        const unsigned int pnt_base = (unsigned int)g_tms_pnt_addr * 0x400;
+        const char* region = "vram_other";
+        if (wvidindex >= pnt_base && wvidindex < pnt_base + 0x300) {
+            region = "vram_name_table";
+        }
+        rom_logger::log_io_write(region, (unsigned short)wvidindex, Value,
+                                 g_ldp->get_current_frame());
+    }
     vidmem[wvidindex] = Value;
     wvidindex++;                // the index always advances when we write
     tms9128nl_writechar(Value); // update the screen
